@@ -19,6 +19,8 @@ no image or font assets are required.
 
 HOW TO PLAY
 -----------
+* The window is freely resizable and HiDPI/4K aware — the game
+  scales itself to any size.  Press F11 to toggle fullscreen.
 * You start with 1000 chips.
 * Use the chip buttons (+10 / -10), or ALL IN, to set your bet,
   then press DEAL.  You cannot deal with a bet of 0 or bet more
@@ -473,9 +475,24 @@ class GameState:
 # ---------------------------------------------------------------------------
 class BlackjackGame:
     def __init__(self):
+        # On Windows, opt out of OS bitmap scaling so HiDPI (4K) screens
+        # don't blur the window; pygame's SCALED mode does the scaling.
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.shcore.SetProcessDpiAwareness(2)
+            except Exception:
+                pass
         pygame.init()
         pygame.display.set_caption("Blackjack")
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        # SCALED renders the game at its logical 1024x720 resolution and
+        # lets the GPU stretch it to any window size / HiDPI display.
+        # Mouse coordinates are translated back to logical units for us.
+        try:
+            self.screen = pygame.display.set_mode(
+                (WIDTH, HEIGHT), pygame.SCALED | pygame.RESIZABLE)
+        except pygame.error:
+            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
         self.fonts = {
             "card": pygame.font.SysFont("georgia", 24, bold=True),
@@ -884,6 +901,8 @@ class BlackjackGame:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                    pygame.display.toggle_fullscreen()
                 for b in self.buttons.values():
                     b.handle_event(event)
             self.update(dt)
