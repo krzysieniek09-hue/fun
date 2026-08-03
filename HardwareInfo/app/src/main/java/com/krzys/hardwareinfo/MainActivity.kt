@@ -40,11 +40,13 @@ class MainActivity : Activity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val liveRows = ArrayList<Pair<TextView, () -> String>>()
+    private val liveCharts = ArrayList<Pair<LineChartView, () -> Float>>()
     private val medium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
 
     private val ticker = object : Runnable {
         override fun run() {
             for ((view, provider) in liveRows) view.text = provider()
+            for ((chart, provider) in liveCharts) chart.addSample(provider())
             handler.postDelayed(this, REFRESH_MS)
         }
     }
@@ -68,6 +70,7 @@ class MainActivity : Activity() {
 
         buildHeader(root)
         buildSocCard(root)
+        buildTemperatureCard(root)
         buildRamCard(root)
         buildGpuCard(root)
         buildStorageCard(root)
@@ -121,8 +124,59 @@ class MainActivity : Activity() {
         addRow(card, "Architecture", if (SpecReader.is64Bit()) "64-bit" else "32-bit")
         addRow(card, "ABIs", SpecReader.abis())
         addRow(card, "Governor", SpecReader.cpuGovernor())
+        addHeroChart(
+            card, "Average clock",
+            valueProvider = {
+                val ghz = SpecReader.avgCurFreqGhz()
+                if (ghz.isNaN()) "n/a" else String.format(Locale.US, "%.2f GHz", ghz)
+            },
+            sampleProvider = { SpecReader.avgCurFreqGhz() }
+        )
         for (core in 0 until SpecReader.coreCount) {
-            addLiveRow(card, "Core $core") { SpecReader.coreFreqLine(core) }
+            addChartRow(
+                card, "Core $core",
+                valueProvider = { SpecReader.coreCurFreqText(core) },
+                sampleProvider = { SpecReader.coreCurFreqGhz(core) }
+            )
+        }
+    }
+
+    private fun buildTemperatureCard(parent: LinearLayout) {
+        val card = newCard(parent, "Temperatures")
+        addHeroChart(
+            card, "Battery",
+            valueProvider = {
+                val tenths = batteryExtra(BatteryManager.EXTRA_TEMPERATURE)
+                if (tenths <= 0) "n/a"
+                else String.format(Locale.US, "%.1f °C", tenths / 10.0)
+            },
+            sampleProvider = {
+                val tenths = batteryExtra(BatteryManager.EXTRA_TEMPERATURE)
+                if (tenths <= 0) Float.NaN else tenths / 10f
+            }
+        )
+
+        // SoC thermal sensors, when the kernel lets apps read them.
+        val zones = SpecReader.thermalZones()
+        val interesting = zones.filter { (name, _) ->
+            val n = name.lowercase(Locale.US)
+            listOf("cpu", "soc", "gpu", "skin", "therm").any { n.contains(it) }
+                && !n.contains("batt")
+        }
+        val shown = (interesting.ifEmpty { zones }).take(6)
+        if (shown.isEmpty()) {
+            addRow(card, "SoC sensors", "not readable on this device")
+        } else {
+            for ((name, path) in shown) {
+                addChartRow(
+                    card, name,
+                    valueProvider = {
+                        val t = SpecReader.zoneTempC(path)
+                        if (t == null) "n/a" else String.format(Locale.US, "%.1f °C", t)
+                    },
+                    sampleProvider = { SpecReader.zoneTempC(path) ?: Float.NaN }
+                )
+            }
         }
     }
 
@@ -232,11 +286,6 @@ class MainActivity : Activity() {
         addLiveRow(card, "Status") {
             SpecReader.batteryStatusName(batteryExtra(BatteryManager.EXTRA_STATUS))
         }
-        addLiveRow(card, "Temperature") {
-            val tenths = batteryExtra(BatteryManager.EXTRA_TEMPERATURE)
-            if (tenths <= 0) "unknown"
-            else String.format(Locale.US, "%.1f °C", tenths / 10.0)
-        }
         addLiveRow(card, "Voltage") {
             val mv = batteryExtra(BatteryManager.EXTRA_VOLTAGE)
             if (mv <= 0) "unknown" else String.format(Locale.US, "%.3f V", mv / 1000.0)
@@ -322,10 +371,7 @@ class MainActivity : Activity() {
     }
 
     private fun addRow(card: LinearLayout, label: String, value: String): TextView {
-        if (card.childCount > 0) {
-            card.addView(View(this).apply { setBackgroundColor(DIVIDER) },
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1))
-        }
+        addDividerIfNeeded(card)
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
@@ -353,5 +399,88 @@ class MainActivity : Activity() {
     private fun addLiveRow(card: LinearLayout, label: String, provider: () -> String) {
         val view = addRow(card, label, provider())
         liveRows.add(view to provider)
+    }
+
+    private fun addDividerIfNeeded(card: LinearLayout) {
+        if (card.childCount > 0) {
+            card.addView(View(this).apply { setBackgroundColor(DIVIDER) },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1))
+        }
+    }
+
+    /** Big current value with a full-width chart underneath, hero style. */
+    private fun addHeroChart(
+        card: LinearLayout,
+        label: String,
+        valueProvider: () -> String,
+        sampleProvider: () -> Float
+    ) {
+        addDividerIfNeeded(card)
+        val block = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(12), 0, dp(12))
+        }
+        block.addView(TextView(this).apply {
+            text = label
+            setTextColor(LABEL)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        })
+        val valueView = TextView(this).apply {
+            text = valueProvider()
+            setTextColor(INK)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(0, dp(2), 0, dp(8))
+        }
+        block.addView(valueView)
+        val chart = LineChartView(this)
+        block.addView(chart, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(72)
+        ))
+        card.addView(block)
+        liveRows.add(valueView to valueProvider)
+        liveCharts.add(chart to sampleProvider)
+        chart.addSample(sampleProvider())
+    }
+
+    /** Label left, sparkline in the middle, live value on the right. */
+    private fun addChartRow(
+        card: LinearLayout,
+        label: String,
+        valueProvider: () -> String,
+        sampleProvider: () -> Float
+    ) {
+        addDividerIfNeeded(card)
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(9), 0, dp(9))
+        }
+        row.addView(TextView(this).apply {
+            text = label
+            setTextColor(LABEL)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            maxLines = 1
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.34f))
+        val chart = LineChartView(this)
+        row.addView(chart, LinearLayout.LayoutParams(0, dp(28), 0.36f).apply {
+            marginStart = dp(8)
+            marginEnd = dp(8)
+        })
+        val valueView = TextView(this).apply {
+            text = valueProvider()
+            setTextColor(INK)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            gravity = Gravity.END
+            typeface = medium
+            maxLines = 1
+        }
+        row.addView(valueView, LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.30f
+        ))
+        card.addView(row)
+        liveRows.add(valueView to valueProvider)
+        liveCharts.add(chart to sampleProvider)
+        chart.addSample(sampleProvider())
     }
 }

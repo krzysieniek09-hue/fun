@@ -103,6 +103,63 @@ object SpecReader {
     fun cpuGovernor(): String =
         readFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor") ?: "unknown"
 
+    /** Current frequency of one core in GHz, or NaN if not readable. */
+    fun coreCurFreqGhz(core: Int): Float {
+        val khz = coreCurFreq(core)
+        return if (khz > 0) khz / 1_000_000f else Float.NaN
+    }
+
+    fun coreCurFreqText(core: Int): String {
+        val ghz = coreCurFreqGhz(core)
+        return if (ghz.isNaN()) "n/a" else String.format(Locale.US, "%.2f GHz", ghz)
+    }
+
+    /** Mean of all readable per-core current frequencies in GHz, or NaN. */
+    fun avgCurFreqGhz(): Float {
+        var sum = 0L
+        var n = 0
+        for (core in 0 until coreCount) {
+            val khz = coreCurFreq(core)
+            if (khz > 0) {
+                sum += khz
+                n++
+            }
+        }
+        return if (n > 0) sum / n / 1_000_000f else Float.NaN
+    }
+
+    // ---------- Temperatures ----------
+
+    /**
+     * Thermal zones the kernel lets us read, as (name, temp-file path).
+     * Many devices block these for apps; callers must cope with an
+     * empty list.
+     */
+    fun thermalZones(): List<Pair<String, String>> {
+        val out = ArrayList<Pair<String, String>>()
+        val dirs = File("/sys/class/thermal")
+            .listFiles { f -> f.name.startsWith("thermal_zone") }
+            ?.sortedBy { it.name } ?: return out
+        for (d in dirs) {
+            val tempPath = "${d.path}/temp"
+            val t = zoneTempC(tempPath) ?: continue
+            if (t <= 0f || t > 150f) continue   // dead or nonsense sensor
+            val name = readFile("${d.path}/type") ?: d.name
+            out.add(name to tempPath)
+        }
+        return out
+    }
+
+    /** Zone temperature in Celsius; kernels report m°C, d°C or °C. */
+    fun zoneTempC(path: String): Float? {
+        val raw = readFile(path)?.toFloatOrNull() ?: return null
+        return when {
+            raw > 1000f -> raw / 1000f
+            raw > 200f -> raw / 10f
+            else -> raw
+        }
+    }
+
     fun abis(): String = Build.SUPPORTED_ABIS.joinToString(", ")
 
     fun is64Bit(): Boolean = Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()

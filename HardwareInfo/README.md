@@ -9,7 +9,8 @@ Android framework and the kernel's `/proc` and `/sys` files.
 
 | Section | Details |
 |---|---|
-| Processor | SoC name, core count, cluster layout, ABIs, governor, **live per-core clock speed** |
+| Processor | SoC name, core count, cluster layout, ABIs, governor, **live clock-speed charts** (average + per-core sparklines) |
+| Temperatures | **Live battery temperature chart** plus sparklines for readable SoC thermal sensors |
 | Memory | Total / available / used RAM (live), swap & zram, kernel cache, low-RAM threshold |
 | Graphics | GPU renderer, vendor and GL version (queried via an off-screen EGL context) |
 | Storage | Internal + removable volumes with used/free space |
