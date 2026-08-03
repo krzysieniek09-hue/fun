@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.hardware.Sensor
@@ -16,30 +15,32 @@ import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import java.util.Locale
 
 /**
- * A HWMonitor-style spec sheet for the phone it runs on.
- * The whole UI is built in code: cards per component, label/value rows,
- * and a 1.5 s refresh tick for the live values (clock speeds, RAM,
- * battery). No layouts inflated, no libraries used.
+ * A spec sheet for the phone it runs on, in a minimal fintech-style
+ * look: light background, white rounded cards, gray labels on the left,
+ * near-black values on the right, hairline dividers. The whole UI is
+ * built in code; live values tick every 1.5 s. No libraries used.
  */
 class MainActivity : Activity() {
 
     private companion object {
-        const val BG = 0xFF0D1B2A.toInt()          // window background
-        const val CARD = 0xFF1B2A41.toInt()        // card background
-        const val ACCENT = 0xFF4CC9F0.toInt()      // section titles
-        const val LABEL = 0xFF8FA3B8.toInt()       // row labels
-        const val VALUE = 0xFFE0E6ED.toInt()       // row values
+        const val BG = 0xFFF5F5F7.toInt()          // window background
+        const val CARD = 0xFFFFFFFF.toInt()        // card surface
+        const val INK = 0xFF0F0F14.toInt()         // titles and values
+        const val LABEL = 0xFF7A7A85.toInt()       // row labels
+        const val DIVIDER = 0xFFEDEDF0.toInt()     // hairlines inside cards
         const val REFRESH_MS = 1500L
     }
 
     private val handler = Handler(Looper.getMainLooper())
     private val liveRows = ArrayList<Pair<TextView, () -> String>>()
+    private val medium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -51,10 +52,18 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        window.statusBarColor = BG
+        window.navigationBarColor = BG
+        var flags = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        if (Build.VERSION.SDK_INT >= 26) {
+            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        }
+        window.decorView.systemUiVisibility = flags
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(BG)
-            setPadding(dp(12), dp(12), dp(12), dp(24))
+            setPadding(dp(16), dp(20), dp(16), dp(32))
         }
 
         buildHeader(root)
@@ -70,6 +79,7 @@ class MainActivity : Activity() {
         setContentView(ScrollView(this).apply {
             setBackgroundColor(BG)
             isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
             addView(root)
         })
     }
@@ -89,16 +99,16 @@ class MainActivity : Activity() {
     private fun buildHeader(parent: LinearLayout) {
         parent.addView(TextView(this).apply {
             text = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
-            setTextColor(VALUE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+            setTextColor(INK)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
-            setPadding(dp(4), dp(8), dp(4), 0)
+            setPadding(dp(4), 0, dp(4), 0)
         })
         parent.addView(TextView(this).apply {
-            text = "Device: ${Build.DEVICE} • Board: ${Build.BOARD}"
+            text = "${Build.DEVICE} · ${Build.BOARD}"
             setTextColor(LABEL)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setPadding(dp(4), dp(2), dp(4), dp(8))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setPadding(dp(4), dp(2), dp(4), dp(4))
         })
     }
 
@@ -112,12 +122,12 @@ class MainActivity : Activity() {
         addRow(card, "ABIs", SpecReader.abis())
         addRow(card, "Governor", SpecReader.cpuGovernor())
         for (core in 0 until SpecReader.coreCount) {
-            addLiveRow(card, "Core $core (cur / max)") { SpecReader.coreFreqLine(core) }
+            addLiveRow(card, "Core $core") { SpecReader.coreFreqLine(core) }
         }
     }
 
     private fun buildRamCard(parent: LinearLayout) {
-        val card = newCard(parent, "Memory (RAM)")
+        val card = newCard(parent, "Memory")
         val mem = SpecReader.memoryInfo(this)
         addRow(card, "Total", SpecReader.formatBytes(mem.totalMem))
         addLiveRow(card, "Available") {
@@ -136,18 +146,15 @@ class MainActivity : Activity() {
             addRow(
                 card, "Swap / zram",
                 if (total == 0L) "none"
-                else "${SpecReader.formatBytes(total - free)} of ${SpecReader.formatBytes(total)} used"
+                else "${SpecReader.formatBytes(total - free)} of ${SpecReader.formatBytes(total)}"
             )
         }
         kernel["Cached"]?.let { addRow(card, "Kernel cache", SpecReader.formatBytes(it)) }
-        addRow(
-            card, "Type / clock",
-            "not exposed by Android (vendor firmware only)"
-        )
+        addRow(card, "Type / clock", "not exposed by Android")
     }
 
     private fun buildGpuCard(parent: LinearLayout) {
-        val card = newCard(parent, "Graphics (GPU)")
+        val card = newCard(parent, "Graphics")
         val gpu = try {
             GpuProbe.query()
         } catch (e: Exception) {
@@ -173,10 +180,8 @@ class MainActivity : Activity() {
             val used = v.total - v.free
             val pct = if (v.total > 0) used * 100 / v.total else 0
             addRow(card, v.label, SpecReader.formatBytes(v.total))
-            addRow(
-                card, "  used / free",
-                "${SpecReader.formatBytes(used)} ($pct%) / ${SpecReader.formatBytes(v.free)}"
-            )
+            addRow(card, "Used", "${SpecReader.formatBytes(used)} ($pct%)")
+            addRow(card, "Free", SpecReader.formatBytes(v.free))
         }
     }
 
@@ -186,8 +191,8 @@ class MainActivity : Activity() {
         val metrics = resources.displayMetrics
 
         val mode = display.mode
-        addRow(card, "Resolution", "${mode.physicalWidth} x ${mode.physicalHeight}")
-        addRow(card, "Density", "${metrics.densityDpi} dpi (${metrics.density}x)")
+        addRow(card, "Resolution", "${mode.physicalWidth} × ${mode.physicalHeight}")
+        addRow(card, "Density", "${metrics.densityDpi} dpi")
         addRow(card, "Refresh rate", String.format(Locale.US, "%.0f Hz", display.refreshRate))
 
         val rates = display.supportedModes
@@ -292,47 +297,51 @@ class MainActivity : Activity() {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    /** Section title above a flat white rounded card, grouped-list style. */
     private fun newCard(parent: LinearLayout, title: String): LinearLayout {
+        parent.addView(TextView(this).apply {
+            text = title
+            setTextColor(INK)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            typeface = medium
+            setPadding(dp(4), dp(20), dp(4), dp(8))
+        })
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(CARD)
-                cornerRadius = dp(12).toFloat()
+                cornerRadius = dp(16).toFloat()
             }
-            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setPadding(dp(16), dp(4), dp(16), dp(4))
         }
-        card.addView(TextView(this).apply {
-            text = title.uppercase(Locale.US)
-            setTextColor(ACCENT)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            typeface = Typeface.DEFAULT_BOLD
-            letterSpacing = 0.08f
-            setPadding(0, 0, 0, dp(6))
-        })
         parent.addView(card, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = dp(10) })
+        ))
         return card
     }
 
     private fun addRow(card: LinearLayout, label: String, value: String): TextView {
+        if (card.childCount > 0) {
+            card.addView(View(this).apply { setBackgroundColor(DIVIDER) },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1))
+        }
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
-            setPadding(0, dp(3), 0, dp(3))
+            setPadding(0, dp(11), 0, dp(11))
         }
         row.addView(TextView(this).apply {
             text = label
             setTextColor(LABEL)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.42f))
         val valueView = TextView(this).apply {
             text = value
-            setTextColor(VALUE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(INK)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             gravity = Gravity.END
-            typeface = Typeface.MONOSPACE
+            typeface = medium
         }
         row.addView(valueView, LinearLayout.LayoutParams(
             0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.58f

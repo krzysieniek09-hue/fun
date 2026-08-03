@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Simple CPU-chip launcher icon drawn by hand as a vector. -->
+<!-- Minimal CPU-chip launcher icon: near-black chip on white. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
     <path
-        android:fillColor="#0D1B2A"
+        android:fillColor="#FFFFFF"
         android:pathData="M0,0h48v48h-48z" />
     <path
-        android:fillColor="#4CC9F0"
+        android:fillColor="#0F0F14"
         android:pathData="M14,14h20v20h-20z" />
     <path
-        android:fillColor="#0D1B2A"
+        android:fillColor="#FFFFFF"
         android:pathData="M19,19h10v10h-10z" />
-    <!-- chip legs: top and bottom -->
+    <!-- chip legs -->
     <path
-        android:fillColor="#4CC9F0"
+        android:fillColor="#0F0F14"
         android:pathData="M17,8h2v5h-2z M23,8h2v5h-2z M29,8h2v5h-2z
                           M17,35h2v5h-2z M23,35h2v5h-2z M29,35h2v5h-2z
                           M8,17h5v2h-5z M8,23h5v2h-5z M8,29h5v2h-5z

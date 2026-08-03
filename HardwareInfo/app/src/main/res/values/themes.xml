@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark, monitor-style look built on the framework Material theme,
-         so no support libraries are needed. -->
-    <style name="Theme.HardwareInfo" parent="android:Theme.Material.NoActionBar">
-        <item name="android:colorPrimary">#0D1B2A</item>
-        <item name="android:colorPrimaryDark">#0D1B2A</item>
-        <item name="android:colorAccent">#4CC9F0</item>
-        <item name="android:windowBackground">#0D1B2A</item>
-        <item name="android:statusBarColor">#0D1B2A</item>
-        <item name="android:navigationBarColor">#0D1B2A</item>
-        <item name="android:textColor">#E0E6ED</item>
+    <!-- Light, minimal look on the framework Material theme -
+         no support libraries needed. -->
+    <style name="Theme.HardwareInfo" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">#F5F5F7</item>
+        <item name="android:colorPrimaryDark">#F5F5F7</item>
+        <item name="android:colorAccent">#0F0F14</item>
+        <item name="android:windowBackground">#F5F5F7</item>
+        <item name="android:statusBarColor">#F5F5F7</item>
+        <item name="android:navigationBarColor">#F5F5F7</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:textColor">#0F0F14</item>
     </style>
 </resources>
