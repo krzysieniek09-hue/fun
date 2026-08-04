@@ -54,6 +54,16 @@ class LineChartView(context: Context) : View(context) {
         invalidate()
     }
 
+    /** History carry-over so a UI rebuild (theme switch) keeps the graph. */
+    fun exportSamples(): List<Float> = samples.toList()
+
+    fun importSamples(history: List<Float>) {
+        samples.clear()
+        for (s in history) samples.addLast(s)
+        while (samples.size > capacity) samples.removeFirst()
+        invalidate()
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         rebuildShader()

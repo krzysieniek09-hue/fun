@@ -30,13 +30,21 @@ import java.util.Locale
 class MainActivity : Activity() {
 
     private companion object {
-        const val BG = 0xFFF5F5F7.toInt()          // window background
-        const val CARD = 0xFFFFFFFF.toInt()        // card surface
-        const val INK = 0xFF0F0F14.toInt()         // titles and values
-        const val LABEL = 0xFF7A7A85.toInt()       // row labels
-        const val DIVIDER = 0xFFEDEDF0.toInt()     // hairlines inside cards
         const val REFRESH_MS = 1500L
+        const val PREFS = "settings"
+        const val PREF_DARK = "dark"
     }
+
+    // Switchable palette; light values by default, see applyPalette().
+    private var BG = 0xFFF5F5F7.toInt()            // window background
+    private var CARD = 0xFFFFFFFF.toInt()          // card surface
+    private var INK = 0xFF0F0F14.toInt()           // titles and values
+    private var LABEL = 0xFF7A7A85.toInt()         // row labels
+    private var DIVIDER = 0xFFEDEDF0.toInt()       // hairlines inside cards
+
+    private var dark = false
+    private lateinit var scroll: ScrollView
+    private lateinit var root: LinearLayout
 
     private val handler = Handler(Looper.getMainLooper())
     private val liveRows = ArrayList<Pair<TextView, () -> String>>()
@@ -54,19 +62,60 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window.statusBarColor = BG
-        window.navigationBarColor = BG
-        var flags = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-        if (Build.VERSION.SDK_INT >= 26) {
-            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-        }
-        window.decorView.systemUiVisibility = flags
+        dark = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(PREF_DARK, false)
 
-        val root = LinearLayout(this).apply {
+        root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(BG)
             setPadding(dp(16), dp(20), dp(16), dp(32))
         }
+        scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(root)
+        }
+        setContentView(scroll)
+
+        applyPalette()
+        buildAll()
+    }
+
+    private fun applyPalette() {
+        if (dark) {
+            BG = 0xFF0E0E11.toInt()
+            CARD = 0xFF1A1A1F.toInt()
+            INK = 0xFFF2F2F5.toInt()
+            LABEL = 0xFF8A8A93.toInt()
+            DIVIDER = 0xFF2A2A30.toInt()
+        } else {
+            BG = 0xFFF5F5F7.toInt()
+            CARD = 0xFFFFFFFF.toInt()
+            INK = 0xFF0F0F14.toInt()
+            LABEL = 0xFF7A7A85.toInt()
+            DIVIDER = 0xFFEDEDF0.toInt()
+        }
+        window.statusBarColor = BG
+        window.navigationBarColor = BG
+        var flags = window.decorView.systemUiVisibility
+        flags = if (dark) {
+            flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv() and
+                (if (Build.VERSION.SDK_INT >= 26)
+                    View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv() else -1)
+        } else {
+            flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                (if (Build.VERSION.SDK_INT >= 26)
+                    View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0)
+        }
+        window.decorView.systemUiVisibility = flags
+        root.setBackgroundColor(BG)
+        scroll.setBackgroundColor(BG)
+    }
+
+    /** (Re)build every card; chart history survives the rebuild. */
+    private fun buildAll() {
+        val history = liveCharts.map { it.first.exportSamples() }
+        liveRows.clear()
+        liveCharts.clear()
+        root.removeAllViews()
 
         buildHeader(root)
         buildSocCard(root)
@@ -79,12 +128,18 @@ class MainActivity : Activity() {
         buildSystemCard(root)
         buildSensorsCard(root)
 
-        setContentView(ScrollView(this).apply {
-            setBackgroundColor(BG)
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            addView(root)
-        })
+        // Cards are built in a fixed order, so old buffers line up 1:1.
+        for (i in liveCharts.indices) {
+            if (i < history.size) liveCharts[i].first.importSamples(history[i])
+        }
+    }
+
+    private fun toggleTheme() {
+        dark = !dark
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+            .putBoolean(PREF_DARK, dark).apply()
+        applyPalette()
+        buildAll()
     }
 
     override fun onResume() {
@@ -100,19 +155,45 @@ class MainActivity : Activity() {
     // ---------- sections ----------
 
     private fun buildHeader(parent: LinearLayout) {
-        parent.addView(TextView(this).apply {
+        val headerRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titles = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        titles.addView(TextView(this).apply {
             text = "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}"
             setTextColor(INK)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(4), 0, dp(4), 0)
         })
-        parent.addView(TextView(this).apply {
+        titles.addView(TextView(this).apply {
             text = "${Build.DEVICE} · ${Build.BOARD}"
             setTextColor(LABEL)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setPadding(dp(4), dp(2), dp(4), dp(4))
         })
+        headerRow.addView(titles, LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+        ))
+
+        // Round theme-toggle button: moon in light mode, sun in dark mode.
+        headerRow.addView(TextView(this).apply {
+            text = if (dark) "☀" else "☾"
+            setTextColor(INK)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(CARD)
+            }
+            contentDescription = if (dark) "Switch to light mode" else "Switch to dark mode"
+            setOnClickListener { toggleTheme() }
+        }, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginStart = dp(8) })
+
+        parent.addView(headerRow)
     }
 
     private fun buildSocCard(parent: LinearLayout) {
@@ -433,7 +514,7 @@ class MainActivity : Activity() {
             setPadding(0, dp(2), 0, dp(8))
         }
         block.addView(valueView)
-        val chart = LineChartView(this)
+        val chart = LineChartView(this).apply { lineColor = INK }
         block.addView(chart, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(72)
         ))
@@ -462,7 +543,7 @@ class MainActivity : Activity() {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             maxLines = 1
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.34f))
-        val chart = LineChartView(this)
+        val chart = LineChartView(this).apply { lineColor = INK }
         row.addView(chart, LinearLayout.LayoutParams(0, dp(28), 0.36f).apply {
             marginStart = dp(8)
             marginEnd = dp(8)
