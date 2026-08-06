@@ -18,6 +18,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Switch
 import android.widget.TextView
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -86,6 +87,12 @@ class MainActivity : Activity() {
 
     /** Average the buffered ticks and hand them to SQLite off-thread. */
     private fun flushPending() {
+        if (RecorderService.running) {
+            // The background recorder owns the database while it's on.
+            pendingSums.clear()
+            pendingCounts.clear()
+            return
+        }
         if (pendingSums.isEmpty()) return
         val averages = HashMap<String, Float>(pendingSums.size)
         for ((key, sum) in pendingSums) {
@@ -160,6 +167,7 @@ class MainActivity : Activity() {
         buildHeader(root)
         buildSocCard(root)
         buildTemperatureCard(root)
+        buildMonitorCard(root)
         buildRamCard(root)
         buildGpuCard(root)
         buildStorageCard(root)
@@ -294,13 +302,7 @@ class MainActivity : Activity() {
         )
 
         // SoC thermal sensors, when the kernel lets apps read them.
-        val zones = SpecReader.thermalZones()
-        val interesting = zones.filter { (name, _) ->
-            val n = name.lowercase(Locale.US)
-            listOf("cpu", "soc", "gpu", "skin", "therm").any { n.contains(it) }
-                && !n.contains("batt")
-        }
-        val shown = (interesting.ifEmpty { zones }).take(6)
+        val shown = SpecReader.interestingZones()
         if (shown.isEmpty()) {
             addRow(card, "SoC sensors", "not readable on this device")
         } else {
@@ -315,6 +317,48 @@ class MainActivity : Activity() {
                 )
             }
         }
+    }
+
+    private fun buildMonitorCard(parent: LinearLayout) {
+        val card = newCard(parent, "Monitoring")
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(9), 0, dp(9))
+        }
+        row.addView(TextView(this).apply {
+            text = "Background recording"
+            setTextColor(INK)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(Switch(this).apply {
+            isChecked = RecorderService.running
+            setOnCheckedChangeListener { _, checked ->
+                if (checked) startRecording() else stopRecording()
+            }
+        })
+        card.addView(row)
+        addRow(
+            card, "While enabled",
+            "records every 10 s with a notification"
+        )
+        addRow(card, "History kept", "3 days")
+    }
+
+    private fun startRecording() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+        val intent = Intent(this, RecorderService::class.java)
+        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent)
+        else startService(intent)
+    }
+
+    private fun stopRecording() {
+        stopService(Intent(this, RecorderService::class.java))
     }
 
     private fun buildRamCard(parent: LinearLayout) {

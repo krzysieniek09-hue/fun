@@ -150,6 +150,20 @@ object SpecReader {
         return out
     }
 
+    /**
+     * The zones worth charting: CPU/SoC/GPU/skin sensors first, up to
+     * six, so the activity and the background recorder agree on keys.
+     */
+    fun interestingZones(): List<Pair<String, String>> {
+        val zones = thermalZones()
+        val interesting = zones.filter { (name, _) ->
+            val n = name.lowercase(Locale.US)
+            listOf("cpu", "soc", "gpu", "skin", "therm").any { n.contains(it) }
+                && !n.contains("batt")
+        }
+        return (interesting.ifEmpty { zones }).take(6)
+    }
+
     /** Zone temperature in Celsius; kernels report m°C, d°C or °C. */
     fun zoneTempC(path: String): Float? {
         val raw = readFile(path)?.toFloatOrNull() ?: return null
