@@ -20,6 +20,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import java.util.Locale
+import java.util.concurrent.Executors
 
 /**
  * A spec sheet for the phone it runs on, in a minimal fintech-style
@@ -31,9 +32,16 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REFRESH_MS = 1500L
+        const val FLUSH_TICKS = 7          // one averaged DB row per ~10 s
         const val PREFS = "settings"
         const val PREF_DARK = "dark"
     }
+
+    private data class ChartBinding(
+        val chart: LineChartView,
+        val key: String,
+        val provider: () -> Float
+    )
 
     // Switchable palette; light values by default, see applyPalette().
     private var BG = 0xFFF5F5F7.toInt()            // window background
@@ -48,21 +56,53 @@ class MainActivity : Activity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val liveRows = ArrayList<Pair<TextView, () -> String>>()
-    private val liveCharts = ArrayList<Pair<LineChartView, () -> Float>>()
+    private val liveCharts = ArrayList<ChartBinding>()
     private val medium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+
+    private val store by lazy { SampleStore(this) }
+    private val dbExecutor = Executors.newSingleThreadExecutor()
+    private val pendingSums = HashMap<String, Float>()
+    private val pendingCounts = HashMap<String, Int>()
+    private var tickCount = 0
 
     private val ticker = object : Runnable {
         override fun run() {
             for ((view, provider) in liveRows) view.text = provider()
-            for ((chart, provider) in liveCharts) chart.addSample(provider())
+            for (binding in liveCharts) {
+                val value = binding.provider()
+                binding.chart.addSample(value)
+                if (value.isFinite()) {
+                    pendingSums[binding.key] = (pendingSums[binding.key] ?: 0f) + value
+                    pendingCounts[binding.key] = (pendingCounts[binding.key] ?: 0) + 1
+                }
+            }
+            if (++tickCount >= FLUSH_TICKS) {
+                tickCount = 0
+                flushPending()
+            }
             handler.postDelayed(this, REFRESH_MS)
         }
+    }
+
+    /** Average the buffered ticks and hand them to SQLite off-thread. */
+    private fun flushPending() {
+        if (pendingSums.isEmpty()) return
+        val averages = HashMap<String, Float>(pendingSums.size)
+        for ((key, sum) in pendingSums) {
+            val n = pendingCounts[key] ?: continue
+            if (n > 0) averages[key] = sum / n
+        }
+        pendingSums.clear()
+        pendingCounts.clear()
+        val ts = System.currentTimeMillis()
+        dbExecutor.execute { store.insertBatch(ts, averages) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         dark = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(PREF_DARK, false)
+        dbExecutor.execute { store.purgeOld() }   // 3-day retention
 
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -112,7 +152,7 @@ class MainActivity : Activity() {
 
     /** (Re)build every card; chart history survives the rebuild. */
     private fun buildAll() {
-        val history = liveCharts.map { it.first.exportSamples() }
+        val history = liveCharts.map { it.chart.exportSamples() }
         liveRows.clear()
         liveCharts.clear()
         root.removeAllViews()
@@ -130,7 +170,22 @@ class MainActivity : Activity() {
 
         // Cards are built in a fixed order, so old buffers line up 1:1.
         for (i in liveCharts.indices) {
-            if (i < history.size) liveCharts[i].first.importSamples(history[i])
+            if (i < history.size) liveCharts[i].chart.importSamples(history[i])
+        }
+
+        // Fresh launch (no in-memory history): pre-fill from the database.
+        val toLoad = liveCharts.filterIndexed { i, _ ->
+            i >= history.size || history[i].size < 2
+        }
+        if (toLoad.isNotEmpty()) {
+            dbExecutor.execute {
+                for (binding in toLoad) {
+                    val stored = store.recent(binding.key, binding.chart.capacity)
+                    if (stored.size >= 2) {
+                        handler.post { binding.chart.importSamples(stored) }
+                    }
+                }
+            }
         }
     }
 
@@ -150,6 +205,7 @@ class MainActivity : Activity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(ticker)
+        flushPending()   // don't lose the last few seconds of samples
     }
 
     // ---------- sections ----------
@@ -206,7 +262,7 @@ class MainActivity : Activity() {
         addRow(card, "ABIs", SpecReader.abis())
         addRow(card, "Governor", SpecReader.cpuGovernor())
         addHeroChart(
-            card, "Average clock",
+            card, "Average clock", "avg_clock",
             valueProvider = {
                 val ghz = SpecReader.avgCurFreqGhz()
                 if (ghz.isNaN()) "n/a" else String.format(Locale.US, "%.2f GHz", ghz)
@@ -215,7 +271,7 @@ class MainActivity : Activity() {
         )
         for (core in 0 until SpecReader.coreCount) {
             addChartRow(
-                card, "Core $core",
+                card, "Core $core", "core$core",
                 valueProvider = { SpecReader.coreCurFreqText(core) },
                 sampleProvider = { SpecReader.coreCurFreqGhz(core) }
             )
@@ -225,7 +281,7 @@ class MainActivity : Activity() {
     private fun buildTemperatureCard(parent: LinearLayout) {
         val card = newCard(parent, "Temperatures")
         addHeroChart(
-            card, "Battery",
+            card, "Battery", "temp_batt",
             valueProvider = {
                 val tenths = batteryExtra(BatteryManager.EXTRA_TEMPERATURE)
                 if (tenths <= 0) "n/a"
@@ -250,7 +306,7 @@ class MainActivity : Activity() {
         } else {
             for ((name, path) in shown) {
                 addChartRow(
-                    card, name,
+                    card, name, "zone:$name",
                     valueProvider = {
                         val t = SpecReader.zoneTempC(path)
                         if (t == null) "n/a" else String.format(Locale.US, "%.1f °C", t)
@@ -493,6 +549,7 @@ class MainActivity : Activity() {
     private fun addHeroChart(
         card: LinearLayout,
         label: String,
+        key: String,
         valueProvider: () -> String,
         sampleProvider: () -> Float
     ) {
@@ -520,7 +577,7 @@ class MainActivity : Activity() {
         ))
         card.addView(block)
         liveRows.add(valueView to valueProvider)
-        liveCharts.add(chart to sampleProvider)
+        liveCharts.add(ChartBinding(chart, key, sampleProvider))
         chart.addSample(sampleProvider())
     }
 
@@ -528,6 +585,7 @@ class MainActivity : Activity() {
     private fun addChartRow(
         card: LinearLayout,
         label: String,
+        key: String,
         valueProvider: () -> String,
         sampleProvider: () -> Float
     ) {
@@ -561,7 +619,7 @@ class MainActivity : Activity() {
         ))
         card.addView(row)
         liveRows.add(valueView to valueProvider)
-        liveCharts.add(chart to sampleProvider)
+        liveCharts.add(ChartBinding(chart, key, sampleProvider))
         chart.addSample(sampleProvider())
     }
 }
