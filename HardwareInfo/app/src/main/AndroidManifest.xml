@@ -9,7 +9,7 @@
         android:label="@string/app_name"
         android:icon="@drawable/ic_chip"
         android:theme="@style/Theme.HardwareInfo"
-        android:allowBackup="true">
+        android:allowBackup="false">
 
         <activity
             android:name=".MainActivity"
