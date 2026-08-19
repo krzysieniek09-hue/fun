@@ -1,0 +1,13 @@
+// Cloudflare Workers static-assets config for Playwave.
+// Deploy with: npx wrangler deploy   (from this directory)
+// First run opens a browser login; after that it's one command.
+{
+  "name": "playwave",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./public",
+    // Serve index.html for any path, so home-screen shortcuts and
+    // deep links always land in the app.
+    "not_found_handling": "single-page-application"
+  }
+}

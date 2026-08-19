@@ -1,0 +1,29 @@
+name: Deploy Playwave to Cloudflare
+
+# Deploys media-player/cloudflare (the single-file web build) to Cloudflare
+# Workers static hosting. Needs two repository secrets:
+#   CLOUDFLARE_API_TOKEN   - dash.cloudflare.com -> profile -> API Tokens ->
+#                            Create Token -> "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID  - dash.cloudflare.com -> Workers & Pages ->
+#                            right sidebar "Account ID"
+# After the first deploy the site is at https://playwave.<subdomain>.workers.dev
+
+on:
+  push:
+    branches: [main, claude/spotify-media-player-cloud-0zkkhy]
+    paths:
+      - "media-player/cloudflare/**"
+      - ".github/workflows/deploy-cloudflare.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy with Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: media-player/cloudflare

@@ -128,6 +128,25 @@ when downloads start failing. And only save music you have the rights to —
 your own uploads, Creative Commons tracks, and the like; downloading is
 against YouTube's terms of service otherwise.
 
+## Hosting the web version on Cloudflare
+
+`web/playwave-web.html` is a fully self-contained build (demo tracks inlined;
+songs you add are kept in the browser's storage). `cloudflare/` wraps it for
+Cloudflare Workers static hosting, two ways to deploy:
+
+- **From GitHub (no tools needed):** add two repository secrets —
+  `CLOUDFLARE_API_TOKEN` (dash.cloudflare.com → profile → API Tokens →
+  "Edit Cloudflare Workers" template) and `CLOUDFLARE_ACCOUNT_ID` (Workers &
+  Pages page, right sidebar) — then run the "Deploy Playwave to Cloudflare"
+  workflow under the repo's Actions tab (it also auto-runs on pushes touching
+  `media-player/cloudflare/`).
+- **From your own machine:** `cd media-player/cloudflare && npx wrangler deploy`
+  (the first run opens a browser login).
+
+Either way the site comes up at `https://playwave.<your-subdomain>.workers.dev`.
+Note the hosted version is the no-server build: YouTube saving and LAN-server
+streaming don't run on a static https site.
+
 ## Player features
 
 - Home, Search, and Library (all-songs playlist) views
