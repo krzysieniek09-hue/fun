@@ -1,0 +1,826 @@
+<title>Playwave</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+{{CSS}}
+
+/* ---------- Web-app additions ---------- */
+
+.tt-dur-cell { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.tt-remove {
+  color: var(--text-subdued);
+  padding: 2px;
+  border-radius: 4px;
+  line-height: 0;
+}
+.tt-remove svg { width: 14px; height: 14px; }
+.tt-remove:hover { color: var(--danger); }
+
+.tip-note { color: var(--text-subdued); font-size: 12px; line-height: 1.5; margin-top: 10px; }
+
+:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .tt-head, .tt-row { grid-template-columns: 32px 1fr 84px; }
+  .tt-album, .tt-source { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="panel nav-panel">
+      <a class="logo" href="#" data-view="home">
+        <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
+          <circle cx="16" cy="16" r="16" fill="#1db954"/>
+          <path d="M8 20.5c4.5-1.4 10.5-1.2 14.5 1M7.5 16c5.5-1.7 12.5-1.4 17 1.2M7 11.5c6.5-2 14.5-1.6 19.5 1.4"
+                stroke="#000" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span>Playwave</span>
+      </a>
+      <nav class="main-nav">
+        <button class="nav-item active" data-view="home">
+          <svg viewBox="0 0 24 24"><path d="M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577l-7.5-4.33zm-2-1.732a3 3 0 0 1 3 0l7.5 4.33a2 2 0 0 1 1 1.732V21a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-1-1v-6h-3v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.577a2 2 0 0 1 1-1.732l7.5-4.33z"/></svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" data-view="search">
+          <svg viewBox="0 0 24 24"><path d="M10.533 1.279c-5.18 0-9.407 4.14-9.407 9.279s4.226 9.279 9.407 9.279c2.234 0 4.29-.77 5.907-2.058l4.353 4.353a1 1 0 1 0 1.414-1.414l-4.344-4.344a9.157 9.157 0 0 0 2.077-5.816c0-5.14-4.226-9.28-9.407-9.28zm-7.407 9.279c0-4.006 3.302-7.28 7.407-7.28s7.407 3.274 7.407 7.28-3.302 7.279-7.407 7.279-7.407-3.273-7.407-7.28z"/></svg>
+          <span>Search</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="panel library-panel">
+      <div class="library-head">
+        <button class="nav-item lib-title" data-view="library">
+          <svg viewBox="0 0 24 24"><path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6.464a1 1 0 0 0-.5-.866l-6-3.464zM9 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z"/></svg>
+          <span>Your Library</span>
+        </button>
+        <button class="icon-btn" id="addBtn" title="Add songs from this device">
+          <svg viewBox="0 0 24 24"><path d="M11.999 3a1 1 0 0 1 1 1v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7h-7a1 1 0 1 1 0-2h7V4a1 1 0 0 1 1-1z"/></svg>
+        </button>
+      </div>
+
+      <div class="source-card">
+        <p class="source-title">Your music, kept here</p>
+        <p class="source-sub">Songs you add are stored in this browser, so they're still here next time you open the page.</p>
+        <button class="pill-btn" id="addBtn2">Add songs</button>
+        <p class="tip-note">Tip: use your browser's <strong>Add to Home Screen</strong> to open Playwave like an app.</p>
+      </div>
+
+      <ul class="side-track-list" id="sideTrackList"></ul>
+    </div>
+  </aside>
+
+  <main class="main panel">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="circle-btn" id="navBack" title="Go back">
+          <svg viewBox="0 0 24 24"><path d="M15.957 2.793a1 1 0 0 1 0 1.414L8.164 12l7.793 7.793a1 1 0 1 1-1.414 1.414L5.336 12l9.207-9.207a1 1 0 0 1 1.414 0z"/></svg>
+        </button>
+        <button class="circle-btn" id="navFwd" title="Go forward">
+          <svg viewBox="0 0 24 24"><path d="M8.043 2.793a1 1 0 0 0 0 1.414L15.836 12l-7.793 7.793a1 1 0 1 0 1.414 1.414L18.664 12 9.457 2.793a1 1 0 0 0-1.414 0z"/></svg>
+        </button>
+      </div>
+      <div class="topbar-right">
+        <div class="avatar" title="You">P</div>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+
+      <section class="view" id="view-home">
+        <h1 class="greeting" id="greeting">Good evening</h1>
+        <div class="quick-grid" id="quickGrid"></div>
+        <div class="section-head">
+          <h2>Your songs</h2>
+          <button class="text-btn" data-view="library">Show all</button>
+        </div>
+        <div class="card-grid" id="cardGrid"></div>
+      </section>
+
+      <section class="view hidden" id="view-search">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24"><path d="M10.533 1.279c-5.18 0-9.407 4.14-9.407 9.279s4.226 9.279 9.407 9.279c2.234 0 4.29-.77 5.907-2.058l4.353 4.353a1 1 0 1 0 1.414-1.414l-4.344-4.344a9.157 9.157 0 0 0 2.077-5.816c0-5.14-4.226-9.28-9.407-9.28zm-7.407 9.279c0-4.006 3.302-7.28 7.407-7.28s7.407 3.274 7.407 7.28-3.302 7.279-7.407 7.279-7.407-3.273-7.407-7.28z"/></svg>
+          <input type="text" id="searchInput" placeholder="What do you want to play?" autocomplete="off">
+        </div>
+        <div class="track-table" id="searchResults"></div>
+        <p class="muted-note hidden" id="searchNone">No results found. Try a different artist or title.</p>
+      </section>
+
+      <section class="view hidden" id="view-library">
+        <div class="lib-hero">
+          <div class="lib-hero-art">
+            <svg viewBox="0 0 24 24"><path d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6V3z"/></svg>
+          </div>
+          <div>
+            <p class="lib-hero-kicker">Playlist</p>
+            <h1>All Songs</h1>
+            <p class="lib-hero-meta" id="libMeta">0 songs</p>
+          </div>
+        </div>
+        <div class="lib-actions">
+          <button class="big-play-btn" id="libPlayAll" title="Play all">
+            <svg viewBox="0 0 24 24"><path d="m7.05 3.606 13.49 7.788a.7.7 0 0 1 0 1.212L7.05 20.394A.7.7 0 0 1 6 19.788V4.212a.7.7 0 0 1 1.05-.606z"/></svg>
+          </button>
+          <button class="icon-btn big" id="libShuffle" title="Shuffle">
+            <svg viewBox="0 0 16 16"><path d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75 13.15.922zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5z"/><path d="m7.5 10.723.98-1.167.957 1.14a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-.787-.937z"/></svg>
+          </button>
+        </div>
+        <div class="track-table" id="libraryTable"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="playerbar">
+    <div class="now-playing">
+      <div class="np-art idle" id="npArt">
+        <svg viewBox="0 0 24 24"><path d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6V3z"/></svg>
+      </div>
+      <div class="np-meta">
+        <span class="np-title" id="npTitle">Not playing</span>
+        <span class="np-artist" id="npArtist">Pick a song to get started</span>
+      </div>
+      <button class="icon-btn like-btn" id="likeBtn" title="Save to liked songs">
+        <svg viewBox="0 0 24 24"><path d="M5.21 1.57a6.757 6.757 0 0 1 6.708 1.545.124.124 0 0 0 .165 0 6.741 6.741 0 0 1 5.715-1.78l.004.001a6.802 6.802 0 0 1 5.571 5.376v.003a6.689 6.689 0 0 1-1.49 5.655l-7.954 9.48a2.518 2.518 0 0 1-3.857 0L2.12 12.37A6.683 6.683 0 0 1 .627 6.714 6.757 6.757 0 0 1 5.21 1.57zm3.12 1.803a4.757 4.757 0 0 0-5.74 3.725l-.001.002a4.684 4.684 0 0 0 1.049 3.969l.009.01 7.958 9.485a.518.518 0 0 0 .79 0l7.968-9.495a4.688 4.688 0 0 0 1.049-3.965 4.803 4.803 0 0 0-3.931-3.794 4.74 4.74 0 0 0-4.023 1.256l-.008.008a2.123 2.123 0 0 1-2.9 0l-.007-.007a4.757 4.757 0 0 0-2.214-1.194z"/></svg>
+      </button>
+    </div>
+
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="icon-btn ctl" id="shuffleBtn" title="Enable shuffle">
+          <svg viewBox="0 0 16 16"><path d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75 13.15.922zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5z"/><path d="m7.5 10.723.98-1.167.957 1.14a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-.787-.937z"/></svg>
+        </button>
+        <button class="icon-btn ctl" id="prevBtn" title="Previous">
+          <svg viewBox="0 0 16 16"><path d="M3.3 1a.7.7 0 0 1 .7.7v5.15l9.95-5.744a.7.7 0 0 1 1.05.606v12.575a.7.7 0 0 1-1.05.607L4 9.149V14.3a.7.7 0 0 1-.7.7H1.7a.7.7 0 0 1-.7-.7V1.7a.7.7 0 0 1 .7-.7h1.6z"/></svg>
+        </button>
+        <button class="play-btn" id="playBtn" title="Play">
+          <svg viewBox="0 0 16 16" class="icon-play"><path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"/></svg>
+          <svg viewBox="0 0 16 16" class="icon-pause hidden"><path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"/></svg>
+        </button>
+        <button class="icon-btn ctl" id="nextBtn" title="Next">
+          <svg viewBox="0 0 16 16"><path d="M12.7 1a.7.7 0 0 0-.7.7v5.15L2.05 1.107A.7.7 0 0 0 1 1.712v12.575a.7.7 0 0 0 1.05.607L12 9.149V14.3a.7.7 0 0 0 .7.7h1.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-1.6z"/></svg>
+        </button>
+        <button class="icon-btn ctl" id="repeatBtn" title="Enable repeat">
+          <svg viewBox="0 0 16 16"><path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z"/></svg>
+          <span class="repeat-one-dot hidden" id="repeatOneDot">1</span>
+        </button>
+      </div>
+      <div class="progress-row">
+        <span class="time" id="curTime">0:00</span>
+        <input type="range" class="slider" id="seekBar" min="0" max="1000" value="0" step="1" aria-label="Seek">
+        <span class="time" id="durTime">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <button class="icon-btn ctl" id="muteBtn" title="Mute">
+        <svg viewBox="0 0 16 16" class="icon-vol"><path d="M9.741.85a.75.75 0 0 1 .375.65v13a.75.75 0 0 1-1.125.65l-6.925-4a3.642 3.642 0 0 1-1.33-4.967 3.639 3.639 0 0 1 1.33-1.332l6.925-4a.75.75 0 0 1 .75 0zm-6.924 5.3a2.139 2.139 0 0 0 0 3.7l5.8 3.35V2.8l-5.8 3.35zm8.683 4.29V5.56a2.75 2.75 0 0 1 0 4.88z"/><path d="M11.5 13.614a5.752 5.752 0 0 0 0-11.228v1.55a4.252 4.252 0 0 1 0 8.127v1.55z"/></svg>
+        <svg viewBox="0 0 16 16" class="icon-muted hidden"><path d="M13.86 5.47a.75.75 0 0 0-1.061 0l-1.47 1.47-1.47-1.47A.75.75 0 0 0 8.8 6.53L10.269 8l-1.47 1.47a.75.75 0 1 0 1.06 1.06l1.47-1.47 1.47 1.47a.75.75 0 0 0 1.06-1.06L12.39 8l1.47-1.47a.75.75 0 0 0 0-1.06z"/><path d="M9.741.85a.75.75 0 0 1 .375.65v13a.75.75 0 0 1-1.125.65l-6.925-4a3.642 3.642 0 0 1-1.33-4.967 3.639 3.639 0 0 1 1.33-1.332l6.925-4a.75.75 0 0 1 .75 0zm-6.924 5.3a2.139 2.139 0 0 0 0 3.7l5.8 3.35V2.8l-5.8 3.35z"/></svg>
+      </button>
+      <input type="range" class="slider vol" id="volBar" min="0" max="100" value="80" step="1" aria-label="Volume">
+    </div>
+  </footer>
+</div>
+
+<input type="file" id="filePicker" multiple accept="audio/*" hidden>
+<audio id="audio" preload="metadata"></audio>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const DEMO_TRACKS = {{DEMOS}};
+
+  const LIKES_KEY = "playwave.likes";
+  const $ = (id) => document.getElementById(id);
+  const audio = $("audio");
+
+  // ---------- State ----------
+
+  const state = {
+    tracks: [],
+    queue: [],
+    queuePos: -1,
+    shuffle: false,
+    repeat: "off",
+    likes: new Set(JSON.parse(localStorage.getItem(LIKES_KEY) || "[]")),
+    viewHistory: ["home"],
+    viewPos: 0,
+  };
+
+  const byId = (id) => state.tracks.find((t) => t.id === id);
+  const currentTrack = () =>
+    state.queuePos >= 0 ? byId(state.queue[state.queuePos]) : null;
+
+  // ---------- IndexedDB: songs added on this device ----------
+
+  const DB_NAME = "playwave-device";
+  const STORE = "songs";
+
+  function openDb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: "id" });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function dbPut(song) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(song);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function dbAll() {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const req = db.transaction(STORE).objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function dbDelete(id) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  // ---------- Helpers ----------
+
+  function fmtTime(sec) {
+    if (!Number.isFinite(sec) || sec < 0) return "-:--";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  function hashHue(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    return h % 360;
+  }
+
+  function coverStyle(track) {
+    const h = hashHue(track.artist + track.title);
+    const h2 = (h + 60) % 360;
+    return `background: linear-gradient(135deg, hsl(${h} 70% 45%), hsl(${h2} 75% 30%))`;
+  }
+
+  const NOTE_SVG =
+    '<svg viewBox="0 0 24 24"><path d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6V3z"/></svg>';
+  const PLAY_SVG =
+    '<svg viewBox="0 0 24 24"><path d="m7.05 3.606 13.49 7.788a.7.7 0 0 1 0 1.212L7.05 20.394A.7.7 0 0 1 6 19.788V4.212a.7.7 0 0 1 1.05-.606z"/></svg>';
+  const DEVICE_SVG =
+    '<svg viewBox="0 0 24 24"><path d="M7 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H7zm0 2h10v14H7V4zm5 15a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>';
+  const X_SVG =
+    '<svg viewBox="0 0 24 24"><path d="M5.293 5.293a1 1 0 0 1 1.414 0L12 10.586l5.293-5.293a1 1 0 1 1 1.414 1.414L13.414 12l5.293 5.293a1 1 0 0 1-1.414 1.414L12 13.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L10.586 12 5.293 6.707a1 1 0 0 1 0-1.414z"/></svg>';
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+    );
+  }
+
+  let toastTimer = null;
+  function toast(msg, isError = false) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.classList.toggle("error", isError);
+    el.classList.remove("hidden");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.add("hidden"), 3200);
+  }
+
+  // ---------- Views ----------
+
+  function showView(name, pushHistory = true) {
+    for (const v of ["home", "search", "library"]) {
+      $(`view-${v}`).classList.toggle("hidden", v !== name);
+    }
+    document.querySelectorAll(".nav-item[data-view]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.view === name);
+    });
+    if (pushHistory) {
+      state.viewHistory = state.viewHistory.slice(0, state.viewPos + 1);
+      state.viewHistory.push(name);
+      state.viewPos = state.viewHistory.length - 1;
+    }
+    if (name === "search") $("searchInput").focus();
+  }
+
+  $("navBack").addEventListener("click", () => {
+    if (state.viewPos > 0) showView(state.viewHistory[--state.viewPos], false);
+  });
+  $("navFwd").addEventListener("click", () => {
+    if (state.viewPos < state.viewHistory.length - 1)
+      showView(state.viewHistory[++state.viewPos], false);
+  });
+  document.querySelectorAll("[data-view]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      showView(el.dataset.view);
+    });
+  });
+
+  // ---------- Rendering ----------
+
+  function render() {
+    renderQuickGrid();
+    renderCardGrid();
+    renderTable($("libraryTable"), state.tracks);
+    renderSearch();
+    renderSidebarList();
+    $("libMeta").textContent =
+      `${state.tracks.length} song${state.tracks.length === 1 ? "" : "s"}`;
+    updatePlayingHighlights();
+  }
+
+  function renderQuickGrid() {
+    const grid = $("quickGrid");
+    grid.innerHTML = "";
+    for (const t of state.tracks.slice(0, 6)) {
+      const el = document.createElement("div");
+      el.className = "quick-card";
+      el.innerHTML =
+        `<div class="q-art" style="${coverStyle(t)}">${NOTE_SVG}</div>` +
+        `<span class="q-title">${esc(t.title)}</span>` +
+        `<button class="hover-play" title="Play">${PLAY_SVG}</button>`;
+      el.addEventListener("click", () => playTrack(t.id));
+      grid.appendChild(el);
+    }
+  }
+
+  function renderCardGrid() {
+    const grid = $("cardGrid");
+    grid.innerHTML = "";
+    for (const t of state.tracks.slice(0, 12)) {
+      const el = document.createElement("div");
+      el.className = "song-card";
+      el.innerHTML =
+        `<div class="card-art" style="${coverStyle(t)}">${NOTE_SVG}</div>` +
+        `<div class="card-title">${esc(t.title)}</div>` +
+        `<div class="card-sub">${esc(t.artist)}</div>` +
+        `<button class="hover-play" title="Play">${PLAY_SVG}</button>`;
+      el.addEventListener("click", () => playTrack(t.id));
+      grid.appendChild(el);
+    }
+  }
+
+  function renderTable(container, tracks) {
+    container.innerHTML = "";
+    if (!tracks.length) return;
+    const head = document.createElement("div");
+    head.className = "tt-head";
+    head.innerHTML =
+      '<span class="tt-num">#</span><span>Title</span><span class="tt-album">Album</span>' +
+      '<span class="tt-source">Source</span><span class="tt-dur">⏱</span>';
+    container.appendChild(head);
+
+    tracks.forEach((t, i) => {
+      const row = document.createElement("div");
+      row.className = "tt-row";
+      row.dataset.trackId = t.id;
+      const srcIcon = t.source === "demo" ? NOTE_SVG : DEVICE_SVG;
+      const srcLabel = t.source === "demo" ? "Demo" : "My music";
+      const removeBtn = t.source === "mine"
+        ? `<button class="tt-remove" title="Remove from this browser">${X_SVG}</button>`
+        : "";
+      row.innerHTML =
+        `<span class="tt-num"><span class="num">${i + 1}</span>` +
+        `<button class="row-play" title="Play">${PLAY_SVG}</button></span>` +
+        `<span class="tt-title-cell">` +
+        `<span class="mini-art" style="${coverStyle(t)}">${NOTE_SVG}</span>` +
+        `<span class="tt-title-meta"><div class="tt-title">${esc(t.title)}</div>` +
+        `<div class="tt-artist">${esc(t.artist)}</div></span></span>` +
+        `<span class="tt-album">${esc(t.album || "—")}</span>` +
+        `<span class="tt-source">${srcIcon}${srcLabel}</span>` +
+        `<span class="tt-dur"><span class="tt-dur-cell">` +
+        `${t.duration ? fmtTime(t.duration) : "–:––"}${removeBtn}</span></span>`;
+      row.addEventListener("click", () => playTrack(t.id, tracks));
+      const rm = row.querySelector(".tt-remove");
+      if (rm) {
+        rm.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeTrack(t.id);
+        });
+      }
+      container.appendChild(row);
+    });
+  }
+
+  function renderSidebarList() {
+    const ul = $("sideTrackList");
+    ul.innerHTML = "";
+    for (const t of state.tracks) {
+      const li = document.createElement("li");
+      li.className = "side-track";
+      li.dataset.trackId = t.id;
+      li.innerHTML =
+        `<span class="mini-art" style="${coverStyle(t)}">${NOTE_SVG}</span>` +
+        `<span class="st-meta"><div class="st-title">${esc(t.title)}</div>` +
+        `<div class="st-artist">${esc(t.artist)}</div></span>`;
+      li.addEventListener("click", () => playTrack(t.id));
+      ul.appendChild(li);
+    }
+  }
+
+  function renderSearch() {
+    const q = $("searchInput").value.trim().toLowerCase();
+    const results = !q
+      ? state.tracks
+      : state.tracks.filter(
+          (t) =>
+            t.title.toLowerCase().includes(q) ||
+            t.artist.toLowerCase().includes(q) ||
+            (t.album || "").toLowerCase().includes(q)
+        );
+    renderTable($("searchResults"), results);
+    $("searchNone").classList.toggle("hidden", !(q && results.length === 0));
+    updatePlayingHighlights();
+  }
+
+  $("searchInput").addEventListener("input", renderSearch);
+
+  function updatePlayingHighlights() {
+    const cur = currentTrack();
+    document.querySelectorAll("[data-track-id]").forEach((el) => {
+      const isCur = cur && el.dataset.trackId === cur.id;
+      el.classList.toggle("playing", Boolean(isCur));
+      if (el.classList.contains("tt-row")) {
+        const num = el.querySelector(".num");
+        if (isCur) {
+          const paused = audio.paused ? " paused" : "";
+          num.innerHTML = `<span class="eq${paused}"><span></span><span></span><span></span></span>`;
+        } else {
+          num.textContent =
+            [...el.parentElement.querySelectorAll(".tt-row")].indexOf(el) + 1;
+        }
+      }
+    });
+  }
+
+  // ---------- Playback ----------
+
+  function buildQueue(fromTracks) {
+    const ids = (fromTracks || state.tracks).map((t) => t.id);
+    if (state.shuffle) {
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+    }
+    return ids;
+  }
+
+  function playTrack(id, context) {
+    state.queue = buildQueue(context);
+    const idx = state.queue.indexOf(id);
+    if (state.shuffle && idx > 0) {
+      state.queue.splice(idx, 1);
+      state.queue.unshift(id);
+    }
+    state.queuePos = state.queue.indexOf(id);
+    loadAndPlay();
+  }
+
+  function loadAndPlay() {
+    const t = currentTrack();
+    if (!t) return;
+    audio.src = t.url;
+    audio.play().catch((err) => {
+      if (err.name !== "AbortError") toast(`Couldn't play "${t.title}"`, true);
+    });
+    updateNowPlaying();
+    updatePlayingHighlights();
+    updateMediaSession(t);
+  }
+
+  function next(auto = false) {
+    if (!state.queue.length) return;
+    if (auto && state.repeat === "one") {
+      audio.currentTime = 0;
+      audio.play();
+      return;
+    }
+    let pos = state.queuePos + 1;
+    if (pos >= state.queue.length) {
+      if (auto && state.repeat === "off") {
+        state.queuePos = state.queue.length - 1;
+        return;
+      }
+      pos = 0;
+    }
+    state.queuePos = pos;
+    loadAndPlay();
+  }
+
+  function prev() {
+    if (!state.queue.length) return;
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+      return;
+    }
+    state.queuePos =
+      state.queuePos <= 0 ? state.queue.length - 1 : state.queuePos - 1;
+    loadAndPlay();
+  }
+
+  function togglePlay() {
+    if (!currentTrack()) {
+      if (state.tracks.length) playTrack(state.tracks[0].id);
+      return;
+    }
+    if (audio.paused) audio.play();
+    else audio.pause();
+  }
+
+  function updateNowPlaying() {
+    const t = currentTrack();
+    const art = $("npArt");
+    if (!t) {
+      $("npTitle").textContent = "Not playing";
+      $("npArtist").textContent = "Pick a song to get started";
+      art.classList.add("idle");
+      art.removeAttribute("style");
+      return;
+    }
+    $("npTitle").textContent = t.title;
+    $("npArtist").textContent = t.artist;
+    art.classList.remove("idle");
+    art.setAttribute("style", coverStyle(t));
+    $("likeBtn").classList.toggle("liked", state.likes.has(t.id));
+  }
+
+  function updateMediaSession(t) {
+    if (!("mediaSession" in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: t.title,
+      artist: t.artist,
+      album: t.album || "",
+    });
+    navigator.mediaSession.setActionHandler("play", () => audio.play());
+    navigator.mediaSession.setActionHandler("pause", () => audio.pause());
+    navigator.mediaSession.setActionHandler("previoustrack", prev);
+    navigator.mediaSession.setActionHandler("nexttrack", () => next());
+  }
+
+  // ---------- Player bar ----------
+
+  $("playBtn").addEventListener("click", togglePlay);
+  $("nextBtn").addEventListener("click", () => next());
+  $("prevBtn").addEventListener("click", prev);
+
+  $("shuffleBtn").addEventListener("click", () => {
+    state.shuffle = !state.shuffle;
+    $("shuffleBtn").classList.toggle("active", state.shuffle);
+    const cur = currentTrack();
+    if (cur) {
+      state.queue = buildQueue();
+      const idx = state.queue.indexOf(cur.id);
+      state.queue.splice(idx, 1);
+      state.queue.unshift(cur.id);
+      state.queuePos = 0;
+    }
+  });
+
+  $("repeatBtn").addEventListener("click", () => {
+    state.repeat =
+      state.repeat === "off" ? "all" : state.repeat === "all" ? "one" : "off";
+    $("repeatBtn").classList.toggle("active", state.repeat !== "off");
+    $("repeatOneDot").classList.toggle("hidden", state.repeat !== "one");
+  });
+
+  $("likeBtn").addEventListener("click", () => {
+    const t = currentTrack();
+    if (!t) return;
+    if (state.likes.has(t.id)) state.likes.delete(t.id);
+    else state.likes.add(t.id);
+    localStorage.setItem(LIKES_KEY, JSON.stringify([...state.likes]));
+    $("likeBtn").classList.toggle("liked", state.likes.has(t.id));
+  });
+
+  const seekBar = $("seekBar");
+  let seeking = false;
+
+  function paintSlider(el, pct) {
+    el.style.setProperty("--fill", `${pct}%`);
+  }
+
+  audio.addEventListener("timeupdate", () => {
+    if (seeking || !audio.duration) return;
+    const pct = (audio.currentTime / audio.duration) * 100;
+    seekBar.value = pct * 10;
+    paintSlider(seekBar, pct);
+    $("curTime").textContent = fmtTime(audio.currentTime);
+  });
+
+  audio.addEventListener("loadedmetadata", () => {
+    $("durTime").textContent = fmtTime(audio.duration);
+    const t = currentTrack();
+    if (t && !t.duration && Number.isFinite(audio.duration)) {
+      t.duration = audio.duration;
+      render();
+    }
+  });
+
+  seekBar.addEventListener("input", () => {
+    seeking = true;
+    paintSlider(seekBar, seekBar.value / 10);
+    if (audio.duration)
+      $("curTime").textContent = fmtTime((seekBar.value / 1000) * audio.duration);
+  });
+  seekBar.addEventListener("change", () => {
+    if (audio.duration) audio.currentTime = (seekBar.value / 1000) * audio.duration;
+    seeking = false;
+  });
+
+  const volBar = $("volBar");
+  let lastVol = 0.8;
+  audio.volume = 0.8;
+  paintSlider(volBar, 80);
+
+  volBar.addEventListener("input", () => {
+    audio.volume = volBar.value / 100;
+    audio.muted = false;
+    paintSlider(volBar, volBar.value);
+    updateVolIcon();
+  });
+
+  $("muteBtn").addEventListener("click", () => {
+    if (audio.volume > 0 && !audio.muted) {
+      lastVol = audio.volume;
+      audio.muted = true;
+      volBar.value = 0;
+    } else {
+      audio.muted = false;
+      audio.volume = lastVol || 0.8;
+      volBar.value = audio.volume * 100;
+    }
+    paintSlider(volBar, volBar.value);
+    updateVolIcon();
+  });
+
+  function updateVolIcon() {
+    const muted = audio.muted || audio.volume === 0;
+    $("muteBtn").querySelector(".icon-vol").classList.toggle("hidden", muted);
+    $("muteBtn").querySelector(".icon-muted").classList.toggle("hidden", !muted);
+  }
+
+  function updatePlayIcon() {
+    $("playBtn").querySelector(".icon-play").classList.toggle("hidden", !audio.paused);
+    $("playBtn").querySelector(".icon-pause").classList.toggle("hidden", audio.paused);
+    updatePlayingHighlights();
+  }
+
+  audio.addEventListener("play", updatePlayIcon);
+  audio.addEventListener("pause", updatePlayIcon);
+  audio.addEventListener("ended", () => next(true));
+  audio.addEventListener("error", () => {
+    const t = currentTrack();
+    if (t) toast(`Playback failed for "${t.title}"`, true);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      e.preventDefault();
+      togglePlay();
+    }
+  });
+
+  $("libPlayAll").addEventListener("click", () => {
+    if (state.tracks.length) playTrack(state.tracks[0].id);
+  });
+  $("libShuffle").addEventListener("click", () => {
+    if (!state.tracks.length) return;
+    state.shuffle = true;
+    $("shuffleBtn").classList.add("active");
+    const pick = state.tracks[Math.floor(Math.random() * state.tracks.length)];
+    playTrack(pick.id);
+  });
+
+  // ---------- Adding & removing songs ----------
+
+  function trackFromStored(song) {
+    return {
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: song.album || "My music",
+      duration: song.duration || null,
+      url: URL.createObjectURL(song.blob),
+      source: "mine",
+    };
+  }
+
+  async function addFiles(files) {
+    let added = 0;
+    for (const f of files) {
+      if (!f.type.startsWith("audio/") && !/\.(mp3|m4a|flac|ogg|opus|wav|aac|webm)$/i.test(f.name)) continue;
+      const base = f.name.replace(/\.[^.]+$/, "");
+      const dash = base.split(" - ");
+      const song = {
+        id: `mine:${f.name}:${f.size}`,
+        title: dash.length > 1 ? dash.slice(1).join(" - ").trim() : base,
+        artist: dash.length > 1 ? dash[0].trim() : "Unknown artist",
+        album: "My music",
+        duration: null,
+        blob: f,
+        savedAt: Date.now(),
+      };
+      if (byId(song.id)) continue;
+      try {
+        await dbPut(song);
+      } catch {
+        toast("Couldn't store that song in this browser", true);
+        continue;
+      }
+      state.tracks.push(trackFromStored(song));
+      added++;
+    }
+    if (added) {
+      render();
+      toast(`Added ${added} song${added === 1 ? "" : "s"} — kept on this device`);
+    }
+  }
+
+  async function removeTrack(id) {
+    try {
+      await dbDelete(id);
+    } catch {
+      /* remove from the session regardless */
+    }
+    const t = byId(id);
+    if (t && t.url.startsWith("blob:")) URL.revokeObjectURL(t.url);
+    const wasCurrent = currentTrack() && currentTrack().id === id;
+    state.tracks = state.tracks.filter((x) => x.id !== id);
+    state.queue = state.queue.filter((x) => x !== id);
+    if (wasCurrent) {
+      audio.pause();
+      audio.removeAttribute("src");
+      state.queuePos = -1;
+      updateNowPlaying();
+    } else if (state.queuePos >= state.queue.length) {
+      state.queuePos = state.queue.length - 1;
+    }
+    render();
+    toast("Removed from this browser");
+  }
+
+  const filePicker = $("filePicker");
+  filePicker.addEventListener("change", () => {
+    addFiles([...filePicker.files]);
+    filePicker.value = "";
+  });
+  $("addBtn").addEventListener("click", () => filePicker.click());
+  $("addBtn2").addEventListener("click", () => filePicker.click());
+
+  // ---------- Boot ----------
+
+  function setGreeting() {
+    const h = new Date().getHours();
+    $("greeting").textContent =
+      h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  }
+
+  async function boot() {
+    setGreeting();
+    for (const d of DEMO_TRACKS) {
+      state.tracks.push({
+        id: `demo:${d.title}`,
+        title: d.title,
+        artist: "Playwave",
+        album: "Playwave Demo",
+        duration: d.duration,
+        url: d.src,
+        source: "demo",
+      });
+    }
+    try {
+      const saved = await dbAll();
+      saved.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+      for (const song of saved) state.tracks.push(trackFromStored(song));
+    } catch {
+      /* IndexedDB unavailable — session-only */
+    }
+    render();
+  }
+
+  boot();
+})();
+</script>
