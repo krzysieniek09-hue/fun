@@ -694,6 +694,11 @@
   const ytJobs = new Map(); // id -> {title, status, progress, error}
 
   function openYtModal() {
+    // Drop finished/failed jobs from earlier attempts so the list stays clean.
+    for (const [key, job] of ytJobs) {
+      if (job.status !== "downloading") ytJobs.delete(key);
+    }
+    renderYtJobs();
     $("ytModalSub").textContent = state.connected
       ? "The computer running your Playwave server downloads the audio with yt-dlp " +
         "and drops it into your music folder. Only save music you have the rights to " +

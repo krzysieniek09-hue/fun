@@ -59,6 +59,94 @@ window.PhoneYT = (() => {
     });
   }
 
+  // ---------- Transport ----------
+
+  // Everything YouTube-bound goes over XMLHttpRequest, not fetch():
+  // the Android WebView's setAllowUniversalAccessFromFileURLs setting lifts
+  // cross-origin restrictions for XHR only — fetch() from a file:// page is
+  // still CORS-blocked, which is exactly how v1.3 failed on-device.
+
+  const IS_WEBVIEW = /; wv\)/.test(navigator.userAgent) ||
+                     location.protocol === "file:";
+
+  function parseXhrHeaders(raw) {
+    const h = new Headers();
+    for (const line of (raw || "").trim().split(/[\r\n]+/)) {
+      const i = line.indexOf(":");
+      if (i > 0) {
+        try {
+          h.append(line.slice(0, i).trim(), line.slice(i + 1).trim());
+        } catch {
+          /* skip unparsable header */
+        }
+      }
+    }
+    return h;
+  }
+
+  // fetch()-compatible shim on top of XHR, for YouTube.js.
+  async function xhrFetch(input, init) {
+    init = init || {};
+    const req = typeof Request !== "undefined" && input instanceof Request ? input : null;
+    const url = req ? req.url : String(input);
+    const method = (init.method || (req && req.method) || "GET").toUpperCase();
+    let body = init.body;
+    if (body === undefined && req && method !== "GET" && method !== "HEAD") {
+      body = await req.clone().arrayBuffer();
+    }
+    const headers = new Headers(init.headers || (req ? req.headers : undefined));
+
+    return new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open(method, url, true);
+      x.responseType = "arraybuffer";
+      headers.forEach((v, k) => {
+        try {
+          x.setRequestHeader(k, v);
+        } catch {
+          /* forbidden header — browser sets its own */
+        }
+      });
+      x.onload = () => {
+        const status = x.status || 200;
+        const noBody =
+          method === "HEAD" || status === 204 || status === 205 || status === 304;
+        const resp = new Response(noBody ? null : x.response, {
+          status,
+          statusText: x.statusText,
+          headers: parseXhrHeaders(x.getAllResponseHeaders()),
+        });
+        try {
+          Object.defineProperty(resp, "url", { value: x.responseURL || url });
+        } catch {
+          /* keep default */
+        }
+        resolve(resp);
+      };
+      x.onerror = () => reject(new TypeError("Network request failed"));
+      x.ontimeout = () => reject(new TypeError("Network request timed out"));
+      x.send(body === undefined ? null : body);
+    });
+  }
+
+  // Binary download with progress, also over XHR.
+  function xhrDownload(url, onProgress) {
+    return new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open("GET", url, true);
+      x.responseType = "arraybuffer";
+      x.onprogress = (e) => {
+        if (onProgress && e.total) onProgress(Math.min(99, (e.loaded / e.total) * 100));
+      };
+      x.onload = () => {
+        if (x.status >= 200 && x.status < 300) resolve(x.response);
+        else reject(new Error(`Audio stream request failed (${x.status}).`));
+      };
+      x.onerror = () => reject(new TypeError("Network request failed"));
+      x.send();
+    });
+  }
+
   // ---------- YouTube.js (lazy) ----------
 
   let ytjsLoading = null;
@@ -93,31 +181,58 @@ window.PhoneYT = (() => {
   }
 
   function friendlyError(err) {
-    // A CORS-blocked fetch surfaces as a bare TypeError: that means we're in
-    // a normal browser tab, where on-device extraction can't work.
-    if (err instanceof TypeError) {
-      return "This browser can't reach YouTube directly. Use the Android app, " +
-             "or connect to your music server and it will download instead.";
+    const netFail =
+      err instanceof TypeError ||
+      (err && err.cause instanceof TypeError) ||
+      /Network request failed/.test((err && err.message) || "");
+    // A blocked/failed request means different things by environment.
+    if (netFail && !IS_WEBVIEW) {
+      return "This browser blocks direct YouTube access (CORS). Use the Android " +
+             "app, or connect to your music server and it will download instead.";
+    }
+    if (netFail) {
+      return "Couldn't reach YouTube from the app. Check the phone's internet " +
+             "connection and try again; if it keeps failing, connect to your music " +
+             "server and it will download instead. (" + ((err && err.message) || "network") + ")";
     }
     return err && err.message ? err.message : "YouTube download failed.";
   }
 
   // ---------- Download ----------
 
+  // Tags an error with the stage it happened in, so a failure the user
+  // reports (screenshot) says exactly what broke.
+  function stageError(stage, err) {
+    const e = new Error(
+      `[${stage}] ${err && err.message ? err.message : String(err)}`
+    );
+    e.cause = err;
+    e.stage = stage;
+    return e;
+  }
+
   async function download(rawUrl, onProgress) {
     const id = videoIdFrom(rawUrl);
     if (!id) throw new Error("That doesn't look like a YouTube video link.");
-    await loadYtjs();
 
-    const yt = await YTJS.Innertube.create({
-      fetch: (input, init) => fetch(input, init),
-    });
+    try {
+      await loadYtjs();
+    } catch (err) {
+      throw stageError("engine", err);
+    }
+
+    let yt;
+    try {
+      yt = await YTJS.Innertube.create({ fetch: xhrFetch });
+    } catch (err) {
+      throw stageError("connect", err);
+    }
 
     // Different InnerTube clients work at different times; try a few.
     let info = null;
     let format = null;
     let lastErr = null;
-    for (const client of [undefined, "IOS", "TV_EMBEDDED", "ANDROID"]) {
+    for (const client of [undefined, "IOS", "TV_EMBEDDED", "ANDROID", "WEB"]) {
       try {
         info = await yt.getBasicInfo(id, client);
         format = info.chooseFormat({ type: "audio", quality: "best" });
@@ -126,22 +241,18 @@ window.PhoneYT = (() => {
         lastErr = err;
       }
     }
-    if (!format) throw lastErr || new Error("No playable audio found for that video.");
+    if (!format) throw stageError("extract", lastErr || new Error("no playable audio for that video"));
 
-    const url = format.decipher(yt.session.player);
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Audio stream request failed (${resp.status}).`);
-
-    const total = Number(resp.headers.get("content-length")) || Number(format.content_length) || 0;
-    const reader = resp.body.getReader();
-    const chunks = [];
-    let received = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.length;
-      if (total && onProgress) onProgress(Math.min(99, (received / total) * 100));
+    let url, buffer;
+    try {
+      url = format.decipher(yt.session.player);
+    } catch (err) {
+      throw stageError("decipher", err);
+    }
+    try {
+      buffer = await xhrDownload(url, onProgress);
+    } catch (err) {
+      throw stageError("stream", err);
     }
 
     const mime = (format.mime_type || "audio/mp4").split(";")[0].trim();
@@ -151,7 +262,7 @@ window.PhoneYT = (() => {
       artist: (info.basic_info && info.basic_info.author) || "YouTube",
       duration: (info.basic_info && info.basic_info.duration) || null,
       mime,
-      blob: new Blob(chunks, { type: mime }),
+      blob: new Blob([buffer], { type: mime }),
       savedAt: Date.now(),
     };
     await putSong(song);

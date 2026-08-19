@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.playwave.app" android:versionCode="4" android:versionName="1.3">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.playwave.app" android:versionCode="5" android:versionName="1.4">
     <uses-permission android:name="android.permission.INTERNET"/>
     <application android:hardwareAccelerated="true" android:icon="@mipmap/ic_launcher" android:label="Playwave" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" android:usesCleartextTraffic="true">
         <activity android:configChanges="orientation|screenSize|keyboardHidden|screenLayout" android:exported="true" android:name="com.playwave.app.MainActivity">
