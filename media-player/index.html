@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playwave</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%231db954'/%3E%3Cpath d='M8 20.5c4.5-1.4 10.5-1.2 14.5 1M7.5 16c5.5-1.7 12.5-1.4 17 1.2M7 11.5c6.5-2 14.5-1.6 19.5 1.4' stroke='%23000' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ======================= SIDEBAR ======================= -->
+  <aside class="sidebar">
+    <div class="panel nav-panel">
+      <a class="logo" href="#" data-view="home">
+        <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
+          <circle cx="16" cy="16" r="16" fill="#1db954"/>
+          <path d="M8 20.5c4.5-1.4 10.5-1.2 14.5 1M7.5 16c5.5-1.7 12.5-1.4 17 1.2M7 11.5c6.5-2 14.5-1.6 19.5 1.4"
+                stroke="#000" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span>Playwave</span>
+      </a>
+      <nav class="main-nav">
+        <button class="nav-item active" data-view="home">
+          <svg viewBox="0 0 24 24"><path d="M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577l-7.5-4.33zm-2-1.732a3 3 0 0 1 3 0l7.5 4.33a2 2 0 0 1 1 1.732V21a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-1-1v-6h-3v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.577a2 2 0 0 1 1-1.732l7.5-4.33z"/></svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" data-view="search">
+          <svg viewBox="0 0 24 24"><path d="M10.533 1.279c-5.18 0-9.407 4.14-9.407 9.279s4.226 9.279 9.407 9.279c2.234 0 4.29-.77 5.907-2.058l4.353 4.353a1 1 0 1 0 1.414-1.414l-4.344-4.344a9.157 9.157 0 0 0 2.077-5.816c0-5.14-4.226-9.28-9.407-9.28zm-7.407 9.279c0-4.006 3.302-7.28 7.407-7.28s7.407 3.274 7.407 7.28-3.302 7.279-7.407 7.279-7.407-3.273-7.407-7.28z"/></svg>
+          <span>Search</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="panel library-panel">
+      <div class="library-head">
+        <button class="nav-item lib-title" data-view="library">
+          <svg viewBox="0 0 24 24"><path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6.464a1 1 0 0 0-.5-.866l-6-3.464zM9 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z"/></svg>
+          <span>Your Library</span>
+        </button>
+        <button class="icon-btn" id="addLocalBtn" title="Add local files">
+          <svg viewBox="0 0 24 24"><path d="M11.999 3a1 1 0 0 1 1 1v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7h-7a1 1 0 1 1 0-2h7V4a1 1 0 0 1 1-1z"/></svg>
+        </button>
+      </div>
+
+      <div class="source-card" id="cloudCard">
+        <p class="source-title">Stream from your server</p>
+        <p class="source-sub" id="cloudCardSub">Connect a ZimaBoard or any home server running the Playwave music server.</p>
+        <button class="pill-btn" id="connectBtn">Connect server</button>
+      </div>
+
+      <div class="source-card" id="localCard">
+        <p class="source-title">Play local files</p>
+        <p class="source-sub">Add songs straight from this device.</p>
+        <button class="pill-btn" id="addLocalBtn2">Add files</button>
+      </div>
+
+      <ul class="side-track-list" id="sideTrackList"></ul>
+    </div>
+  </aside>
+
+  <!-- ======================= MAIN ======================= -->
+  <main class="main panel">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="circle-btn" id="navBack" title="Go back">
+          <svg viewBox="0 0 24 24"><path d="M15.957 2.793a1 1 0 0 1 0 1.414L8.164 12l7.793 7.793a1 1 0 1 1-1.414 1.414L5.336 12l9.207-9.207a1 1 0 0 1 1.414 0z"/></svg>
+        </button>
+        <button class="circle-btn" id="navFwd" title="Go forward">
+          <svg viewBox="0 0 24 24"><path d="M8.043 2.793a1 1 0 0 0 0 1.414L15.836 12l-7.793 7.793a1 1 0 1 0 1.414 1.414L18.664 12 9.457 2.793a1 1 0 0 0-1.414 0z"/></svg>
+        </button>
+      </div>
+      <div class="topbar-right">
+        <span class="conn-badge" id="connBadge" title="Cloud server status">
+          <svg viewBox="0 0 24 24"><path d="M6.5 20a5.5 5.5 0 0 1-.62-10.965 7.501 7.501 0 0 1 14.55 1.9A4.5 4.5 0 0 1 19.5 20h-13z"/></svg>
+          <span id="connBadgeText">Offline</span>
+        </span>
+        <div class="avatar" title="You">P</div>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+
+      <!-- HOME VIEW -->
+      <section class="view" id="view-home">
+        <h1 class="greeting" id="greeting">Good evening</h1>
+        <div class="quick-grid" id="quickGrid"></div>
+        <div class="section-head">
+          <h2>Your songs</h2>
+          <button class="text-btn" data-view="library">Show all</button>
+        </div>
+        <div class="card-grid" id="cardGrid"></div>
+        <div class="empty-state" id="homeEmpty">
+          <div class="empty-art">
+            <svg viewBox="0 0 24 24"><path d="M6.5 20a5.5 5.5 0 0 1-.62-10.965 7.501 7.501 0 0 1 14.55 1.9A4.5 4.5 0 0 1 19.5 20h-13z"/></svg>
+          </div>
+          <h2>Nothing here yet</h2>
+          <p>Connect your ZimaBoard music server or add local files to start listening.</p>
+          <div class="empty-actions">
+            <button class="pill-btn solid" id="emptyConnectBtn">Connect server</button>
+            <button class="pill-btn" id="emptyLocalBtn">Add local files</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEARCH VIEW -->
+      <section class="view hidden" id="view-search">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24"><path d="M10.533 1.279c-5.18 0-9.407 4.14-9.407 9.279s4.226 9.279 9.407 9.279c2.234 0 4.29-.77 5.907-2.058l4.353 4.353a1 1 0 1 0 1.414-1.414l-4.344-4.344a9.157 9.157 0 0 0 2.077-5.816c0-5.14-4.226-9.28-9.407-9.28zm-7.407 9.279c0-4.006 3.302-7.28 7.407-7.28s7.407 3.274 7.407 7.28-3.302 7.279-7.407 7.279-7.407-3.273-7.407-7.28z"/></svg>
+          <input type="text" id="searchInput" placeholder="What do you want to play?" autocomplete="off">
+        </div>
+        <div class="track-table" id="searchResults"></div>
+        <p class="muted-note hidden" id="searchNone">No results found. Try a different artist or title.</p>
+      </section>
+
+      <!-- LIBRARY VIEW -->
+      <section class="view hidden" id="view-library">
+        <div class="lib-hero">
+          <div class="lib-hero-art">
+            <svg viewBox="0 0 24 24"><path d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6V3z"/></svg>
+          </div>
+          <div>
+            <p class="lib-hero-kicker">Playlist</p>
+            <h1>All Songs</h1>
+            <p class="lib-hero-meta" id="libMeta">0 songs</p>
+          </div>
+        </div>
+        <div class="lib-actions">
+          <button class="big-play-btn" id="libPlayAll" title="Play all">
+            <svg viewBox="0 0 24 24"><path d="m7.05 3.606 13.49 7.788a.7.7 0 0 1 0 1.212L7.05 20.394A.7.7 0 0 1 6 19.788V4.212a.7.7 0 0 1 1.05-.606z"/></svg>
+          </button>
+          <button class="icon-btn big" id="libShuffle" title="Shuffle">
+            <svg viewBox="0 0 24 24"><path d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75 13.15.922zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5z"/><path d="m7.5 10.723.98-1.167.957 1.14a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-.787-.937z" transform="translate(4 5)"/></svg>
+          </button>
+        </div>
+        <div class="track-table" id="libraryTable"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ======================= PLAYER BAR ======================= -->
+  <footer class="playerbar">
+    <div class="now-playing">
+      <div class="np-art" id="npArt">
+        <svg viewBox="0 0 24 24"><path d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6V3z"/></svg>
+      </div>
+      <div class="np-meta">
+        <span class="np-title" id="npTitle">Not playing</span>
+        <span class="np-artist" id="npArtist">Pick a song to get started</span>
+      </div>
+      <button class="icon-btn like-btn" id="likeBtn" title="Save to liked songs">
+        <svg viewBox="0 0 24 24"><path d="M5.21 1.57a6.757 6.757 0 0 1 6.708 1.545.124.124 0 0 0 .165 0 6.741 6.741 0 0 1 5.715-1.78l.004.001a6.802 6.802 0 0 1 5.571 5.376v.003a6.689 6.689 0 0 1-1.49 5.655l-7.954 9.48a2.518 2.518 0 0 1-3.857 0L2.12 12.37A6.683 6.683 0 0 1 .627 6.714 6.757 6.757 0 0 1 5.21 1.57zm3.12 1.803a4.757 4.757 0 0 0-5.74 3.725l-.001.002a4.684 4.684 0 0 0 1.049 3.969l.009.01 7.958 9.485a.518.518 0 0 0 .79 0l7.968-9.495a4.688 4.688 0 0 0 1.049-3.965 4.803 4.803 0 0 0-3.931-3.794 4.74 4.74 0 0 0-4.023 1.256l-.008.008a2.123 2.123 0 0 1-2.9 0l-.007-.007a4.757 4.757 0 0 0-2.214-1.194z"/></svg>
+      </button>
+    </div>
+
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="icon-btn ctl" id="shuffleBtn" title="Enable shuffle">
+          <svg viewBox="0 0 16 16"><path d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75 13.15.922zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5z"/><path d="m7.5 10.723.98-1.167.957 1.14a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-.787-.937z"/></svg>
+        </button>
+        <button class="icon-btn ctl" id="prevBtn" title="Previous">
+          <svg viewBox="0 0 16 16"><path d="M3.3 1a.7.7 0 0 1 .7.7v5.15l9.95-5.744a.7.7 0 0 1 1.05.606v12.575a.7.7 0 0 1-1.05.607L4 9.149V14.3a.7.7 0 0 1-.7.7H1.7a.7.7 0 0 1-.7-.7V1.7a.7.7 0 0 1 .7-.7h1.6z"/></svg>
+        </button>
+        <button class="play-btn" id="playBtn" title="Play">
+          <svg viewBox="0 0 16 16" class="icon-play"><path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"/></svg>
+          <svg viewBox="0 0 16 16" class="icon-pause hidden"><path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"/></svg>
+        </button>
+        <button class="icon-btn ctl" id="nextBtn" title="Next">
+          <svg viewBox="0 0 16 16"><path d="M12.7 1a.7.7 0 0 0-.7.7v5.15L2.05 1.107A.7.7 0 0 0 1 1.712v12.575a.7.7 0 0 0 1.05.607L12 9.149V14.3a.7.7 0 0 0 .7.7h1.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-1.6z"/></svg>
+        </button>
+        <button class="icon-btn ctl" id="repeatBtn" title="Enable repeat">
+          <svg viewBox="0 0 16 16"><path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5A2.25 2.25 0 0 0 1.5 4.75v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z"/></svg>
+          <span class="repeat-one-dot hidden" id="repeatOneDot">1</span>
+        </button>
+      </div>
+      <div class="progress-row">
+        <span class="time" id="curTime">0:00</span>
+        <input type="range" class="slider" id="seekBar" min="0" max="1000" value="0" step="1" aria-label="Seek">
+        <span class="time" id="durTime">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <button class="icon-btn ctl" id="muteBtn" title="Mute">
+        <svg viewBox="0 0 16 16" class="icon-vol"><path d="M9.741.85a.75.75 0 0 1 .375.65v13a.75.75 0 0 1-1.125.65l-6.925-4a3.642 3.642 0 0 1-1.33-4.967 3.639 3.639 0 0 1 1.33-1.332l6.925-4a.75.75 0 0 1 .75 0zm-6.924 5.3a2.139 2.139 0 0 0 0 3.7l5.8 3.35V2.8l-5.8 3.35zm8.683 4.29V5.56a2.75 2.75 0 0 1 0 4.88z"/><path d="M11.5 13.614a5.752 5.752 0 0 0 0-11.228v1.55a4.252 4.252 0 0 1 0 8.127v1.55z"/></svg>
+        <svg viewBox="0 0 16 16" class="icon-muted hidden"><path d="M13.86 5.47a.75.75 0 0 0-1.061 0l-1.47 1.47-1.47-1.47A.75.75 0 0 0 8.8 6.53L10.269 8l-1.47 1.47a.75.75 0 1 0 1.06 1.06l1.47-1.47 1.47 1.47a.75.75 0 0 0 1.06-1.06L12.39 8l1.47-1.47a.75.75 0 0 0 0-1.06z"/><path d="M9.741.85a.75.75 0 0 1 .375.65v13a.75.75 0 0 1-1.125.65l-6.925-4a3.642 3.642 0 0 1-1.33-4.967 3.639 3.639 0 0 1 1.33-1.332l6.925-4a.75.75 0 0 1 .75 0zm-6.924 5.3a2.139 2.139 0 0 0 0 3.7l5.8 3.35V2.8l-5.8 3.35z"/></svg>
+      </button>
+      <input type="range" class="slider vol" id="volBar" min="0" max="100" value="80" step="1" aria-label="Volume">
+    </div>
+  </footer>
+</div>
+
+<!-- ======================= CONNECT MODAL ======================= -->
+<div class="modal-backdrop hidden" id="connectModal">
+  <div class="modal">
+    <h2>Connect to your music server</h2>
+    <p class="modal-sub">Point Playwave at a ZimaBoard 2 (or any machine on your network) running the
+      bundled server &mdash; see <code>server/zima-server.js</code>. Your songs stream straight from it.</p>
+    <label class="field-label" for="serverUrlInput">Server address</label>
+    <input type="text" id="serverUrlInput" class="text-input" placeholder="http://192.168.1.50:8090" autocomplete="off" spellcheck="false">
+    <p class="modal-hint">Tip: on most home networks the ZimaBoard is reachable at
+      <code>http://zimaboard.local:8090</code> or via its LAN IP.</p>
+    <p class="modal-error hidden" id="connectError"></p>
+    <div class="modal-actions">
+      <button class="text-btn" id="disconnectBtn">Disconnect</button>
+      <span class="spacer"></span>
+      <button class="text-btn" id="cancelConnectBtn">Cancel</button>
+      <button class="pill-btn solid" id="doConnectBtn">Connect</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="filePicker" multiple accept="audio/*" hidden>
+<audio id="audio" preload="metadata"></audio>
+<div class="toast hidden" id="toast"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
