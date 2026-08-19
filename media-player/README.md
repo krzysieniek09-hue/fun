@@ -98,11 +98,20 @@ back to `GET <server>/songs.json`:
 ## Save songs from YouTube
 
 Paste a YouTube link into the app (the ⤓ button in the top bar, or "Save
-from YouTube" in the sidebar) and the computer running the server downloads
-the audio into your music folder with [yt-dlp](https://github.com/yt-dlp/yt-dlp),
-shows live progress, and the song appears in your library when it's done.
-This works on any machine running `zima-server.js` — a ZimaBoard, your PC,
-anything.
+from YouTube" in the sidebar). What happens depends on your setup:
+
+- **Connected to a server** — the server machine downloads the audio into
+  your music folder with [yt-dlp](https://github.com/yt-dlp/yt-dlp), with
+  live progress, and the song appears in the shared library. Works on any
+  machine running `zima-server.js` — a ZimaBoard, your PC, anything.
+- **No server (Android app)** — the phone downloads the audio itself using
+  [YouTube.js](https://github.com/LuanRT/YouTube.js) and keeps it in the
+  app's own storage; saved songs show up under the "Saved" source and
+  survive restarts. This path only works inside the Android app (a normal
+  browser tab is blocked by CORS) and is best-effort: when YouTube changes
+  something it may stop working until the bundled engine is refreshed with
+  `scripts/bundle-ytjs.sh` and the APK rebuilt. The server path is the
+  reliable one.
 
 Setup on the server machine (one time):
 

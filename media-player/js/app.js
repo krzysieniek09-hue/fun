@@ -179,7 +179,7 @@
       const srcIcon =
         t.source === "cloud" ? CLOUD_SVG : t.source === "demo" ? NOTE_SVG : DEVICE_SVG;
       const srcLabel =
-        t.source === "cloud" ? "Server" : t.source === "demo" ? "Demo" : "Local";
+        { cloud: "Server", demo: "Demo", saved: "Saved" }[t.source] || "Local";
       row.innerHTML =
         `<span class="tt-num"><span class="num">${i + 1}</span>` +
         `<button class="row-play" title="Play">${PLAY_SVG}</button></span>` +
@@ -694,11 +694,13 @@
   const ytJobs = new Map(); // id -> {title, status, progress, error}
 
   function openYtModal() {
-    if (!state.connected) {
-      toast("Connect to your music server first", true);
-      openModal();
-      return;
-    }
+    $("ytModalSub").textContent = state.connected
+      ? "The computer running your Playwave server downloads the audio with yt-dlp " +
+        "and drops it into your music folder. Only save music you have the rights to " +
+        "(your own uploads, Creative Commons, and so on)."
+      : "No server connected, so the audio is downloaded on this device and kept in " +
+        "the app's own storage. Only save music you have the rights to (your own " +
+        "uploads, Creative Commons, and so on).";
     $("ytError").classList.add("hidden");
     ytModal.classList.remove("hidden");
     $("ytUrlInput").focus();
@@ -733,6 +735,54 @@
     }
   }
 
+  let deviceJobSeq = 0;
+
+  // No server connected: download on this device via PhoneYT (works inside
+  // the Android app's WebView; a normal browser tab gets a clear error).
+  async function deviceYtDownload(raw) {
+    const key = `device-${++deviceJobSeq}`;
+    ytJobs.set(key, { title: raw, status: "downloading", progress: 0, error: null });
+    renderYtJobs();
+    try {
+      const song = await PhoneYT.download(raw, (p) => {
+        const j = ytJobs.get(key);
+        j.progress = p;
+        renderYtJobs();
+      });
+      ytJobs.set(key, {
+        title: `${song.artist} - ${song.title}`,
+        status: "done",
+        progress: 100,
+        error: null,
+      });
+      renderYtJobs();
+      addSavedTrack(song);
+      render();
+      toast(`Saved "${song.title}" to this device`);
+    } catch (err) {
+      ytJobs.set(key, {
+        ...ytJobs.get(key),
+        status: "error",
+        error: PhoneYT.friendlyError(err),
+      });
+      renderYtJobs();
+      toast("YouTube download failed", true);
+    }
+  }
+
+  function addSavedTrack(song) {
+    if (byId(song.id)) return;
+    state.tracks.push({
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: "Saved from YouTube",
+      duration: song.duration,
+      url: URL.createObjectURL(song.blob),
+      source: "saved",
+    });
+  }
+
   async function submitYtDownload() {
     const raw = $("ytUrlInput").value.trim();
     if (!raw) return;
@@ -740,6 +790,11 @@
     errEl.classList.add("hidden");
     const btn = $("ytDownloadBtn");
     btn.disabled = true;
+    if (!state.connected) {
+      $("ytUrlInput").value = "";
+      deviceYtDownload(raw).finally(() => (btn.disabled = false));
+      return;
+    }
     try {
       const res = await fetch(`${state.serverUrl}/api/download`, {
         method: "POST",
@@ -813,6 +868,16 @@
 
   async function boot() {
     setGreeting();
+
+    // Songs previously saved from YouTube onto this device.
+    try {
+      const saved = await PhoneYT.allSaved();
+      saved.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+      for (const song of saved) addSavedTrack(song);
+    } catch {
+      /* IndexedDB unavailable — nothing to restore */
+    }
+
     render();
     updateConnBadge();
 

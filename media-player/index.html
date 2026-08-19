@@ -229,8 +229,7 @@
 <div class="modal-backdrop hidden" id="ytModal">
   <div class="modal">
     <h2>Save a song from YouTube</h2>
-    <p class="modal-sub">The computer running your Playwave server downloads the audio with
-      <code>yt-dlp</code> and drops it into your music folder. Only save music you have the
+    <p class="modal-sub" id="ytModalSub">Paste a link below. Only save music you have the
       rights to (your own uploads, Creative Commons, and so on).</p>
     <label class="field-label" for="ytUrlInput">YouTube link</label>
     <input type="text" id="ytUrlInput" class="text-input" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
@@ -248,6 +247,7 @@
 <audio id="audio" preload="metadata"></audio>
 <div class="toast hidden" id="toast"></div>
 
+<script src="js/phone-yt.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
