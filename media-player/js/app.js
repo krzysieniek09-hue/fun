@@ -176,8 +176,10 @@
       const row = document.createElement("div");
       row.className = "tt-row";
       row.dataset.trackId = t.id;
-      const srcIcon = t.source === "cloud" ? CLOUD_SVG : DEVICE_SVG;
-      const srcLabel = t.source === "cloud" ? "Server" : "Local";
+      const srcIcon =
+        t.source === "cloud" ? CLOUD_SVG : t.source === "demo" ? NOTE_SVG : DEVICE_SVG;
+      const srcLabel =
+        t.source === "cloud" ? "Server" : t.source === "demo" ? "Demo" : "Local";
       row.innerHTML =
         `<span class="tt-num"><span class="num">${i + 1}</span>` +
         `<button class="row-play" title="Play">${PLAY_SVG}</button></span>` +
@@ -487,6 +489,40 @@
     const pick = state.tracks[Math.floor(Math.random() * state.tracks.length)];
     playTrack(pick.id);
   });
+
+  // ---------- Bundled demo tracks ----------
+
+  // Shipped alongside the app (demo/*.ogg) so there is something to play
+  // before any server or local files are set up. Relative URLs work both
+  // hosted and from file:// (the Android WebView loads assets this way).
+  const DEMO_TRACKS = [
+    { file: "neon-dusk.ogg", title: "Neon Dusk", duration: 21 },
+    { file: "glass-waves.ogg", title: "Glass Waves", duration: 23 },
+    { file: "midnight-transit.ogg", title: "Midnight Transit", duration: 19 },
+    { file: "sunset-loop.ogg", title: "Sunset Loop", duration: 25 },
+  ];
+
+  function addDemoTracks(andPlay) {
+    let firstId = null;
+    for (const d of DEMO_TRACKS) {
+      const id = `demo:${d.file}`;
+      if (!firstId) firstId = id;
+      if (byId(id)) continue;
+      state.tracks.push({
+        id,
+        title: d.title,
+        artist: "Playwave",
+        album: "Playwave Demo",
+        duration: d.duration,
+        url: `demo/${d.file}`,
+        source: "demo",
+      });
+    }
+    render();
+    if (andPlay && firstId) playTrack(firstId);
+  }
+
+  $("emptyDemoBtn").addEventListener("click", () => addDemoTracks(true));
 
   // ---------- Local files ----------
 

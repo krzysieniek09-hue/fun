@@ -191,13 +191,16 @@ const server = http.createServer((req, res) => {
   }
 
   // Everything else: serve the web app so the ZimaBoard hosts player + music.
+  // Audio types are allowed too, for the bundled demo tracks in demo/.
   let rel = pathname === "/" ? "index.html" : pathname.slice(1);
   const filePath = path.resolve(APP_DIR, rel);
-  if (!filePath.startsWith(APP_DIR + path.sep) || !STATIC_TYPES[path.extname(filePath)]) {
+  const ext = path.extname(filePath).toLowerCase();
+  const type = STATIC_TYPES[ext] || AUDIO_TYPES[ext];
+  if (!filePath.startsWith(APP_DIR + path.sep) || !type) {
     return sendJson(res, 404, { error: "not found" });
   }
   if (!fs.existsSync(filePath)) return sendJson(res, 404, { error: "not found" });
-  streamFile(req, res, filePath, STATIC_TYPES[path.extname(filePath)]);
+  streamFile(req, res, filePath, type);
 });
 
 server.listen(PORT, "0.0.0.0", () => {

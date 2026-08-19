@@ -119,6 +119,24 @@ unknown developer — that's expected for a sideloaded test build.
 `http://192.168.1.50:8090`. The address is remembered. Cleartext (plain http)
 traffic to your LAN server is explicitly allowed by the app.
 
+## No ZimaBoard? Three ways to use it anyway
+
+1. **Demo songs** — the app ships with four bundled demo tracks. On the empty
+   home screen tap **Play demo songs**; nothing else is needed.
+2. **Local files** — tap **＋** / "Add files" and pick audio straight from
+   your phone (or from the browser's device when using the web version).
+3. **Any computer is the "server"** — the ZimaBoard is just the machine that
+   runs `server/zima-server.js`; your PC or laptop works identically:
+
+   ```bash
+   # Windows (PowerShell), macOS or Linux — Node 18+ installed:
+   node server/zima-server.js "C:\Users\you\Music" 8090   # or ~/Music
+   ```
+
+   Then connect the phone app to `http://<your-pc-ip>:8090` (find the IP with
+   `ipconfig` / `ip addr`; phone and PC must be on the same Wi-Fi). When you
+   get a ZimaBoard later, move the same command there — nothing else changes.
+
 **Rebuild it yourself** — no Android SDK or Gradle needed, just a JDK (11+)
 and curl:
 

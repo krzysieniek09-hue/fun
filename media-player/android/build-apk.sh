@@ -26,10 +26,15 @@ fetch dx.jar           https://repo1.maven.org/maven2/com/jakewharton/android/re
 fetch apksig.jar       https://repo1.maven.org/maven2/com/android/tools/build/apksig/2.3.0/apksig-2.3.0.jar
 
 rm -rf "$BUILD"
-mkdir -p "$BUILD/classes" "$BUILD/proj/assets/www"
+mkdir -p "$BUILD/classes" "$BUILD/stubs" "$BUILD/proj/assets/www"
 
-echo "compiling MainActivity ..."
-javac --release 8 -nowarn -cp "$TOOLS/android-stub.jar" -d "$BUILD/classes" src/MainActivity.java
+# Compile-time stubs shadow classes in the (API 16) android jar that gained
+# methods we need in later APIs; they are never dexed or packaged.
+echo "compiling stubs + MainActivity ..."
+javac --release 8 -nowarn -cp "$TOOLS/android-stub.jar" -d "$BUILD/stubs" \
+  $(find src-stubs -name '*.java')
+javac --release 8 -nowarn -cp "$BUILD/stubs:$TOOLS/android-stub.jar" \
+  -d "$BUILD/classes" src/MainActivity.java
 
 echo "dexing ..."
 java -cp "$TOOLS/dx.jar" com.android.dx.command.Main \
@@ -39,7 +44,7 @@ echo "staging apk project ..."
 cp AndroidManifest.xml apktool.yml "$BUILD/proj/"
 cp -r res "$BUILD/proj/res"
 cp ../index.html "$BUILD/proj/assets/www/"
-cp -r ../css ../js "$BUILD/proj/assets/www/"
+cp -r ../css ../js ../demo "$BUILD/proj/assets/www/"
 
 echo "packaging with apktool ..."
 java -jar "$TOOLS/apktool.jar" b "$BUILD/proj" -o "$BUILD/playwave-unsigned.apk"
