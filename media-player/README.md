@@ -95,6 +95,30 @@ back to `GET <server>/songs.json`:
 ]
 ```
 
+## Save songs from YouTube
+
+Paste a YouTube link into the app (the ⤓ button in the top bar, or "Save
+from YouTube" in the sidebar) and the computer running the server downloads
+the audio into your music folder with [yt-dlp](https://github.com/yt-dlp/yt-dlp),
+shows live progress, and the song appears in your library when it's done.
+This works on any machine running `zima-server.js` — a ZimaBoard, your PC,
+anything.
+
+Setup on the server machine (one time):
+
+- Easiest: download the single-file yt-dlp build from
+  [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) and put it on
+  the PATH or right next to `zima-server.js`. No Python needed.
+- Or `pip install yt-dlp` if Python is around; the server also finds
+  `python3 -m yt_dlp` automatically (set `$YTDLP` to override detection).
+- ffmpeg is **not** required — the original audio stream (m4a/webm) is saved
+  as-is, and the player handles those formats natively.
+
+YouTube changes their site regularly, so keep yt-dlp updated (`yt-dlp -U`)
+when downloads start failing. And only save music you have the rights to —
+your own uploads, Creative Commons tracks, and the like; downloading is
+against YouTube's terms of service otherwise.
+
 ## Player features
 
 - Home, Search, and Library (all-songs playlist) views

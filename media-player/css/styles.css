@@ -800,6 +800,43 @@ svg { fill: currentColor; display: block; }
   margin-top: 24px;
 }
 
+/* ---------- YouTube download jobs ---------- */
+
+.yt-jobs { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+.yt-job-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.yt-job-title {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.yt-job-status { color: var(--text-subdued); font-size: 12px; font-weight: 700; flex: none; }
+.yt-job.done .yt-job-status { color: var(--accent-bright); }
+.yt-job.error .yt-job-status { color: var(--danger); }
+
+.yt-job-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #4d4d4d;
+  overflow: hidden;
+}
+.yt-job-bar div {
+  height: 100%;
+  background: var(--accent-bright);
+  transition: width 0.4s ease;
+}
+.yt-job.error .yt-job-bar div { background: var(--danger); }
+
+.yt-job-error { color: var(--danger); font-size: 12px; margin-top: 6px; line-height: 1.4; }
+
 /* ---------- Toast ---------- */
 
 .toast {

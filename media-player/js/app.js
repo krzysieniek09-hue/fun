@@ -688,6 +688,121 @@
     closeModal();
   });
 
+  // ---------- Save from YouTube ----------
+
+  const ytModal = $("ytModal");
+  const ytJobs = new Map(); // id -> {title, status, progress, error}
+
+  function openYtModal() {
+    if (!state.connected) {
+      toast("Connect to your music server first", true);
+      openModal();
+      return;
+    }
+    $("ytError").classList.add("hidden");
+    ytModal.classList.remove("hidden");
+    $("ytUrlInput").focus();
+  }
+  const closeYtModal = () => ytModal.classList.add("hidden");
+
+  $("ytOpenBtn").addEventListener("click", openYtModal);
+  $("ytCardBtn").addEventListener("click", openYtModal);
+  $("ytCloseBtn").addEventListener("click", closeYtModal);
+  ytModal.addEventListener("click", (e) => {
+    if (e.target === ytModal) closeYtModal();
+  });
+
+  function renderYtJobs() {
+    const box = $("ytJobs");
+    box.innerHTML = "";
+    for (const job of ytJobs.values()) {
+      const el = document.createElement("div");
+      el.className = `yt-job ${job.status}`;
+      const label =
+        job.status === "downloading"
+          ? `${Math.round(job.progress)}%`
+          : job.status === "done"
+          ? "Saved"
+          : "Failed";
+      el.innerHTML =
+        `<div class="yt-job-row"><span class="yt-job-title">${esc(job.title)}</span>` +
+        `<span class="yt-job-status">${label}</span></div>` +
+        `<div class="yt-job-bar"><div style="width:${job.progress}%"></div></div>` +
+        (job.error ? `<div class="yt-job-error">${esc(job.error)}</div>` : "");
+      box.appendChild(el);
+    }
+  }
+
+  async function submitYtDownload() {
+    const raw = $("ytUrlInput").value.trim();
+    if (!raw) return;
+    const errEl = $("ytError");
+    errEl.classList.add("hidden");
+    const btn = $("ytDownloadBtn");
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${state.serverUrl}/api/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: raw }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errEl.textContent = data.hint ? `${data.error}. ${data.hint}` : data.error;
+        errEl.classList.remove("hidden");
+        return;
+      }
+      $("ytUrlInput").value = "";
+      ytJobs.set(data.id, { title: raw, status: "downloading", progress: 0, error: null });
+      renderYtJobs();
+      pollYtJob(data.id);
+    } catch {
+      errEl.textContent = "Couldn't reach the server.";
+      errEl.classList.remove("hidden");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function pollYtJob(id) {
+    const timer = setInterval(async () => {
+      let job;
+      try {
+        const res = await fetch(`${state.serverUrl}/api/download/${id}`);
+        if (!res.ok) throw new Error();
+        job = await res.json();
+      } catch {
+        clearInterval(timer);
+        ytJobs.set(id, { ...ytJobs.get(id), status: "error", error: "Lost contact with the server." });
+        renderYtJobs();
+        return;
+      }
+      ytJobs.set(id, {
+        title: job.title || ytJobs.get(id).title,
+        status: job.status,
+        progress: job.progress,
+        error: job.error,
+      });
+      renderYtJobs();
+      if (job.status === "done") {
+        clearInterval(timer);
+        toast(`Saved "${job.title || "song"}" to your library`);
+        connectServer(state.serverUrl, { silent: true }).catch(() => {});
+      } else if (job.status === "error") {
+        clearInterval(timer);
+        toast("YouTube download failed", true);
+      }
+    }, 1500);
+  }
+
+  $("ytDownloadBtn").addEventListener("click", submitYtDownload);
+  $("ytUrlInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitYtDownload();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeYtModal();
+  });
+
   // ---------- Boot ----------
 
   function setGreeting() {

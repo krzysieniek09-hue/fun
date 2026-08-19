@@ -53,6 +53,12 @@
         <button class="pill-btn" id="connectBtn">Connect server</button>
       </div>
 
+      <div class="source-card" id="ytCard">
+        <p class="source-title">Save from YouTube</p>
+        <p class="source-sub">Paste a link and your server saves the audio to your library.</p>
+        <button class="pill-btn" id="ytCardBtn">Add from link</button>
+      </div>
+
       <div class="source-card" id="localCard">
         <p class="source-title">Play local files</p>
         <p class="source-sub">Add songs straight from this device.</p>
@@ -75,6 +81,9 @@
         </button>
       </div>
       <div class="topbar-right">
+        <button class="circle-btn" id="ytOpenBtn" title="Save a song from a YouTube link">
+          <svg viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v9.586l3.293-3.293a1 1 0 0 1 1.414 1.414L12 17.414l-5.707-5.707a1 1 0 0 1 1.414-1.414L11 13.586V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg>
+        </button>
         <span class="conn-badge" id="connBadge" title="Cloud server status">
           <svg viewBox="0 0 24 24"><path d="M6.5 20a5.5 5.5 0 0 1-.62-10.965 7.501 7.501 0 0 1 14.55 1.9A4.5 4.5 0 0 1 19.5 20h-13z"/></svg>
           <span id="connBadgeText">Offline</span>
@@ -212,6 +221,25 @@
       <span class="spacer"></span>
       <button class="text-btn" id="cancelConnectBtn">Cancel</button>
       <button class="pill-btn solid" id="doConnectBtn">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= YOUTUBE MODAL ======================= -->
+<div class="modal-backdrop hidden" id="ytModal">
+  <div class="modal">
+    <h2>Save a song from YouTube</h2>
+    <p class="modal-sub">The computer running your Playwave server downloads the audio with
+      <code>yt-dlp</code> and drops it into your music folder. Only save music you have the
+      rights to (your own uploads, Creative Commons, and so on).</p>
+    <label class="field-label" for="ytUrlInput">YouTube link</label>
+    <input type="text" id="ytUrlInput" class="text-input" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off" spellcheck="false">
+    <p class="modal-error hidden" id="ytError"></p>
+    <div class="yt-jobs" id="ytJobs"></div>
+    <div class="modal-actions">
+      <span class="spacer"></span>
+      <button class="text-btn" id="ytCloseBtn">Close</button>
+      <button class="pill-btn solid" id="ytDownloadBtn">Save to library</button>
     </div>
   </div>
 </div>
