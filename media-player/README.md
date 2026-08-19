@@ -13,7 +13,9 @@ media-player/
 ├── index.html            the app
 ├── css/styles.css
 ├── js/app.js
-└── server/zima-server.js music server for the ZimaBoard (Node 18+, no deps)
+├── server/zima-server.js music server for the ZimaBoard (Node 18+, no deps)
+└── android/              WebView wrapper + build script producing a test APK
+    └── playwave-debug.apk   prebuilt, ready to sideload
 ```
 
 ## Quick start (everything on the ZimaBoard)
@@ -101,6 +103,35 @@ back to `GET <server>/songs.json`:
 - Local files source: add songs straight from the device you're browsing on
 - Media-keys / lock-screen integration via the Media Session API
 - <kbd>Space</kbd> toggles playback
+
+## Android test APK
+
+`android/playwave-debug.apk` is a prebuilt, sideloadable test build: the web
+app wrapped in a full-screen WebView (package `com.playwave.app`, minSdk 24 =
+Android 7.0+, ~41 KB).
+
+**Install:** copy the APK to your phone (download from this repo, or via USB /
+your cloud drive), open it, and allow "install unknown apps" when prompted.
+It's signed with a throwaway debug key, so Play Protect will note it's an
+unknown developer — that's expected for a sideloaded test build.
+
+**Use:** tap the cloud badge (top right) and enter your server address, e.g.
+`http://192.168.1.50:8090`. The address is remembered. Cleartext (plain http)
+traffic to your LAN server is explicitly allowed by the app.
+
+**Rebuild it yourself** — no Android SDK or Gradle needed, just a JDK (11+)
+and curl:
+
+```bash
+cd android
+./build-apk.sh        # fetches apktool/dx/apksig once, outputs playwave-debug.apk
+```
+
+The script compiles `src/MainActivity.java` against a stub android.jar from
+Maven Central, dexes it with `dx`, packages manifest + icons + web app with
+apktool, and signs with the v2 scheme via `apksig`. A fresh debug keystore is
+generated on first build — if you rebuild on another machine, the signature
+changes and Android will ask you to uninstall the old copy first.
 
 ## Local demo (no ZimaBoard handy)
 

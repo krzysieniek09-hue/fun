@@ -264,7 +264,7 @@ svg { fill: currentColor; display: block; }
 
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 8px;
   margin-bottom: 32px;
 }
@@ -838,4 +838,22 @@ svg { fill: currentColor; display: block; }
   .logo { justify-content: center; padding: 8px 0 16px; }
   .playerbar { grid-template-columns: 1fr auto; }
   .player-right { display: none; }
+}
+
+/* Phones: stack the player bar and tighten the hero */
+@media (max-width: 600px) {
+  :root { --playerbar-h: 128px; }
+  .playerbar {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 6px;
+    padding-top: 6px;
+  }
+  .np-art { width: 42px; height: 42px; }
+  .like-btn { margin-left: auto; }
+  .content { padding: 8px 16px 24px; }
+  .greeting { font-size: 26px; }
+  .lib-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .lib-hero-art { width: 128px; height: 128px; }
 }
