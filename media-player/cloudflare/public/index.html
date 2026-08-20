@@ -901,6 +901,132 @@ svg { fill: currentColor; display: block; }
   .lib-hero-art { width: 128px; height: 128px; }
 }
 
+/* ========================================================================
+   Motion
+   Entrance, hover and press behaviour. Every rule here is decorative — the
+   reduced-motion block at the end switches the whole lot off.
+   ======================================================================== */
+
+@keyframes pw-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pw-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pw-art-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pw-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pw-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pw-toast-out {
+  to { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+@keyframes pw-hero-drift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+/* ---------- Entrances ---------- */
+
+.app { animation: pw-fade-in 0.45s ease both; }
+
+.view:not(.hidden) {
+  animation: pw-fade-up 0.34s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* Cards and rows fade up in sequence. The app adds .stagger only when the
+   library's contents actually changed, so routine redraws stay still. */
+.stagger > * {
+  animation: pw-fade-up 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 30ms; }
+.stagger > *:nth-child(3) { animation-delay: 60ms; }
+.stagger > *:nth-child(4) { animation-delay: 90ms; }
+.stagger > *:nth-child(5) { animation-delay: 120ms; }
+.stagger > *:nth-child(6) { animation-delay: 150ms; }
+.stagger > *:nth-child(7) { animation-delay: 180ms; }
+.stagger > *:nth-child(8) { animation-delay: 210ms; }
+.stagger > *:nth-child(9) { animation-delay: 240ms; }
+.stagger > *:nth-child(10) { animation-delay: 270ms; }
+.stagger > *:nth-child(11) { animation-delay: 300ms; }
+.stagger > *:nth-child(12) { animation-delay: 330ms; }
+.stagger > *:nth-child(n + 13) { animation-delay: 360ms; }
+
+/* ---------- Hover ---------- */
+
+.song-card { transition: background 0.25s ease, transform 0.25s ease; }
+.song-card:hover { transform: translateY(-3px); }
+.song-card .card-art { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.song-card:hover .card-art {
+  transform: scale(1.03);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
+}
+
+.quick-card .q-art { transition: transform 0.25s ease; }
+.quick-card:hover .q-art { transform: scale(1.06); }
+
+.tt-row, .side-track { transition: background 0.18s ease; }
+.side-track .mini-art { transition: transform 0.2s ease; }
+.side-track:hover .mini-art { transform: scale(1.05); }
+
+/* ---------- Press feedback ---------- */
+
+.circle-btn { transition: transform 0.15s ease, color 0.15s ease; }
+.icon-btn { transition: color 0.15s ease, transform 0.15s ease; }
+.play-btn:active { transform: scale(0.92); }
+.big-play-btn:active { transform: scale(0.94); }
+.pill-btn:active { transform: scale(0.96); }
+.circle-btn:active { transform: scale(0.9); }
+.icon-btn:active { transform: scale(0.88); }
+
+/* ---------- Now playing ---------- */
+
+.np-art.pw-swap { animation: pw-art-in 0.38s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.np-meta.pw-swap { animation: pw-fade-up 0.38s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.like-btn.pop svg { animation: pw-pop 0.4s ease; }
+
+/* ---------- Modal, toast, hero ---------- */
+
+.modal-backdrop:not(.hidden) { animation: pw-fade-in 0.2s ease both; }
+.modal-backdrop:not(.hidden) .modal {
+  animation: pw-modal-in 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.toast.leaving { animation: pw-toast-out 0.24s ease forwards; }
+
+.lib-hero-art {
+  background-size: 200% 200%;
+  animation: pw-hero-drift 14s ease-in-out infinite alternate;
+}
+
+/* ---------- Respect the system setting ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 
 /* ---------- Web-app additions ---------- */
 
@@ -1194,13 +1320,22 @@ svg { fill: currentColor; display: block; }
   }
 
   let toastTimer = null;
+  let toastHideTimer = null;
   function toast(msg, isError = false) {
     const el = $("toast");
     el.textContent = msg;
     el.classList.toggle("error", isError);
     el.classList.remove("hidden");
+    el.classList.remove("leaving");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.add("hidden"), 3200);
+    clearTimeout(toastHideTimer);
+    toastTimer = setTimeout(() => {
+      el.classList.add("leaving");
+      toastHideTimer = setTimeout(() => {
+        el.classList.add("hidden");
+        el.classList.remove("leaving");
+      }, 240);
+    }, 3200);
   }
 
   // ---------- Views ----------
@@ -1236,7 +1371,34 @@ svg { fill: currentColor; display: block; }
 
   // ---------- Rendering ----------
 
+  // Restart a CSS animation: drop the class, force a reflow, re-add it.
+  function replay(els, cls) {
+    for (const el of els) {
+      if (!el) continue;
+      el.classList.remove(cls);
+      void el.offsetWidth;
+      el.classList.add(cls);
+    }
+  }
+
+  // The entrance stagger is replayed only when the library's contents
+  // change, so routine redraws (a duration arriving, a highlight moving)
+  // don't make the whole grid flicker.
+  let lastLibrarySig = null;
+  let staggerThisRender = false;
+
+  function refreshStaggerFlag() {
+    const sig = state.tracks.map((t) => t.id).join("|");
+    staggerThisRender = sig !== lastLibrarySig;
+    lastLibrarySig = sig;
+  }
+
+  function stagger(container) {
+    container.classList.toggle("stagger", staggerThisRender);
+  }
+
   function render() {
+    refreshStaggerFlag();
     renderQuickGrid();
     renderCardGrid();
     renderTable($("libraryTable"), state.tracks);
@@ -1250,6 +1412,7 @@ svg { fill: currentColor; display: block; }
   function renderQuickGrid() {
     const grid = $("quickGrid");
     grid.innerHTML = "";
+    stagger(grid);
     for (const t of state.tracks.slice(0, 6)) {
       const el = document.createElement("div");
       el.className = "quick-card";
@@ -1265,6 +1428,7 @@ svg { fill: currentColor; display: block; }
   function renderCardGrid() {
     const grid = $("cardGrid");
     grid.innerHTML = "";
+    stagger(grid);
     for (const t of state.tracks.slice(0, 12)) {
       const el = document.createElement("div");
       el.className = "song-card";
@@ -1280,6 +1444,7 @@ svg { fill: currentColor; display: block; }
 
   function renderTable(container, tracks) {
     container.innerHTML = "";
+    stagger(container);
     if (!tracks.length) return;
     const head = document.createElement("div");
     head.className = "tt-head";
@@ -1323,6 +1488,7 @@ svg { fill: currentColor; display: block; }
   function renderSidebarList() {
     const ul = $("sideTrackList");
     ul.innerHTML = "";
+    stagger(ul);
     for (const t of state.tracks) {
       const li = document.createElement("li");
       li.className = "side-track";
@@ -1456,11 +1622,14 @@ svg { fill: currentColor; display: block; }
       art.removeAttribute("style");
       return;
     }
+    const changed = art.dataset.trackId !== t.id;
+    art.dataset.trackId = t.id;
     $("npTitle").textContent = t.title;
     $("npArtist").textContent = t.artist;
     art.classList.remove("idle");
     art.setAttribute("style", coverStyle(t));
     $("likeBtn").classList.toggle("liked", state.likes.has(t.id));
+    if (changed) replay([art, document.querySelector(".np-meta")], "pw-swap");
   }
 
   function updateMediaSession(t) {
@@ -1508,7 +1677,9 @@ svg { fill: currentColor; display: block; }
     if (state.likes.has(t.id)) state.likes.delete(t.id);
     else state.likes.add(t.id);
     localStorage.setItem(LIKES_KEY, JSON.stringify([...state.likes]));
-    $("likeBtn").classList.toggle("liked", state.likes.has(t.id));
+    const liked = state.likes.has(t.id);
+    $("likeBtn").classList.toggle("liked", liked);
+    if (liked) replay([$("likeBtn")], "pop");
   });
 
   const seekBar = $("seekBar");
